@@ -11,19 +11,41 @@ class HostInfo {
 interface Configuration {
 	macToName: { [mac: string]: string };
 	hostToName: { [hostname: string]: string };
-	// interval in seconds with which nmaplog.sh is called
+	// interval in minutes with which nmaplog.sh is called
 	logInterval: number;
-	// don't show in Graph if total time less than this
+	// don't show in Graph if total time less than this (minutes)
 	ignoreLessThan: number;
 }
 interface Hosts { [mac: string]: HostInfo }
-let config: Configuration; 
-function dateMap(date: Date) {
-	date.setMonth(0, 0);
-	date.setFullYear(1970);
+let config: Configuration;
+interface DatesMapper {
+	mapDates(inp:Date[]):Date[];
+	getPercentageMultiply(inp:Date[]):number;
+	incrementTime(date:Date):Date;
 }
-function incSpan(date: Date) {
-	date.setHours(date.getHours() + 1);
+let dailyMapper:DatesMapper = {
+	mapDates:mapToSingleDate,
+	getPercentageMultiply: dates => {let min = d3.min(dates), max = d3.max(dates); return 1/((max.getTime() - min.getTime())/1000/60/60/24);},
+	incrementTime: (date) => addHours(1,date)
+}
+let globalMapper:DatesMapper = {
+	mapDates: d=> d,
+	getPercentageMultiply: d => 1/3,
+	incrementTime: date => addHours(3, date)
+}
+function mapToSingleDate(dates: Date[]) {
+	dates = dates.map(date => {
+		date = new Date(date.toString());
+		date.setFullYear(1970);
+		date.setMonth(0, 1);
+		return date;
+	});
+	return dates;
+}
+function addHours(hours: number, date: Date) {
+	date = new Date(date.toString());
+	date.setHours(date.getHours() + hours);
+	return date;
 }
 module Parser {
 	function parse(hosts: Hosts, d: Document) {
@@ -69,8 +91,17 @@ function totable(data: any[]) {
 		.map(row => $("<tr>").append(row.map(val => $("<td>").text(val)))));
 	return table;
 }
-function display(hosts: Hosts) {
-	let table = totable(
+let makeBins = (begin: Date, end: Date, incrementTime: (d: Date) => Date) => {
+	begin.setHours(0, 0, 0, 0);
+	let thresholds = [+begin];
+	while (begin < end) {
+		begin = incrementTime(begin);
+		thresholds.push(+begin);
+	}
+	return thresholds;
+}
+function getTable(hosts: Hosts) {
+	return totable(
 		Object.keys(hosts).map(mac => hosts[mac])
 			.sort((a, b) => b.times.length - a.times.length)
 			.map(host =>
@@ -82,22 +113,11 @@ function display(hosts: Hosts) {
 					Uptime: (host.times.length / 6).toFixed(1) + " hours"
 				})
 			));
-	$("body>div").append("<h3>Totals</h3>");
-	$("body>div").append(table);
-	let bins = (range: [number, number], values: Date[], index: number) => {
-		let begin = new Date(range[0]);
-		let end = new Date(range[1]);
-		begin.setHours(0, 0, 0, 0);
-		let thresholds: number[] = [];
-		while (begin < end) {
-			incSpan(begin);
-			thresholds.push(+begin);
-		}
-		return thresholds;
-	}
-	$("#chart").highcharts({
+}
+function getChart(title:string, hosts: Hosts, mapDates: DatesMapper) {
+	return {
 		chart: { type: 'line', zoomType: 'x' },
-		title: { text: 'Who\'s in my network?' },
+		title: { text: title },
 		xAxis: {
 			type: 'datetime',
 			//minRange: 14 * 24 * 60 * 60 * 1000
@@ -105,16 +125,33 @@ function display(hosts: Hosts) {
 		plotOptions: { line: { marker: { enabled: false } } },
 		yAxis: {
 			title: { text: 'Online' },
-			labels: { format: "{value:%.0f}%" }
+			labels: { format: "{value:%.0f}%" },
+			min: 0
 		},
 		// tooltip: {},
 		series: Object.keys(hosts).map(h => hosts[h]).filter(h => {
 			return h.times.length * config.logInterval > config.ignoreLessThan;
-		}).map(h => ({
-			name: getname(h),
-			data: d3.layout.histogram<Date>().bins(bins)(h.times).map(bin => ({ x: bin.x, y: bin.y * 100 / 6 })).sort((a, b) => a.x - b.x)
-		}))
-	});
+		}).map(h => {
+			let multiply = mapDates.getPercentageMultiply(h.times);
+			let dates = mapDates.mapDates(h.times);
+			let min = d3.min(dates), max = d3.max(dates); 
+			return {
+				name: getname(h),
+				data: d3.layout.histogram<Date>()
+					.bins(makeBins(min, max, mapDates.incrementTime))
+					(dates)
+					.map(bin => ({ x: bin.x, y: bin.y * 100 * config.logInterval * multiply / 60 })).sort((a, b) => a.x - b.x)
+			}})
+	}
+}
+function display(hosts: Hosts) {
+	(<any>window).hosts = hosts;
+
+	$("body>div").append("<h3>Totals</h3>");
+	$("body>div").append(getTable(hosts));
+
+	$("#globalChart").highcharts(getChart("Uptime percentage by date", hosts, globalMapper));
+	$("#dailyChart").highcharts(getChart("Uptime percentage by day time", hosts, dailyMapper));
 }
 let getdata: JQueryPromise<Hosts>;
 if (!usecache) {
@@ -125,7 +162,10 @@ if (!usecache) {
 		return hosts;
 	});
 }
+
+Highcharts.setOptions({ global: { useUTC: false } });
 $.getJSON("config.json").then(_config => {
 	config = _config;
+	this.config = config;
 	$.when(getdata).done(hosts => display(hosts));
 }).fail(x => console.error(x));
