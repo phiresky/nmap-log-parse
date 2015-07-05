@@ -1,0 +1,14 @@
+{
+	"compilerOptions": {
+		"target": "ES5",
+		"outDir": "bin",
+		"out": "bin/program.js",
+		"watch": true,
+		"sourceMap": true,
+		"noImplicitAny": true,
+		"module": "commonjs"
+	},
+	"files": [
+		"src/program.ts"
+	]
+}
