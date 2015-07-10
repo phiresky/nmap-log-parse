@@ -1,4 +1,4 @@
-let usecache = true; // run once,  copy(JSON.stringify(hosts)) > cache.json
+let usecache = location.hash.indexOf("nocache") < 0; // run once,  copy(JSON.stringify(hosts)) > cache.json
 class MacAddress {
 	constructor(public addr: string, public vendor: string) { }
 }

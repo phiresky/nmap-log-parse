@@ -3,7 +3,6 @@
 		"target": "ES5",
 		"outDir": "bin",
 		"out": "bin/program.js",
-		"watch": true,
 		"sourceMap": true,
 		"noImplicitAny": true,
 		"module": "commonjs"
