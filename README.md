@@ -4,9 +4,12 @@ Logs which devices are in your local network and draws graphs
 
 ## Setup
 
-add this line to your crontab: `*/10 * * * * ../path-to/nmaplog.sh`
+1. add this line to your crontab:
+    `*/10 * * * * nmap -sn $subnet -oX - | xz >> $outputpath/logs.xz`
 
-generate xml input with `zcat nmap-log/*.xml.gz > allfiles`
+	where
 
-to use cache for faster page load, open the page and run `copy(JSON.stringify(hosts))`, and then `xsel -b > cache.json`, then set `usecache` to true and it should work
+    - $subnet is your local network, e.g. '192.168.178.*'
+	- $outputpath is the path where you want your log stored
 
+2. create a `config.json` file. For the schema see [Configuration.ts](src/Configuration.ts)

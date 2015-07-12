@@ -11,6 +11,7 @@
 		"lib/typings/d3/d3.d.ts",
 		"lib/typings/highcharts/highcharts.d.ts",
 		"lib/typings/jquery/jquery.d.ts",
+		"src/Configuration.ts",
 		"src/program.ts"
 	]
 }

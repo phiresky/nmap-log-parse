@@ -1,87 +1,95 @@
-let usecache = location.hash.indexOf("nocache") < 0; // run once,  copy(JSON.stringify(hosts)) > cache.json
 class MacAddress {
 	constructor(public addr: string, public vendor: string) { }
 }
 class HostInfo {
 	times: Date[] = [];
-	hostnames: string[] = [];
-	ips: string[] = [];
+	hostnames: {[hostname:string]:number} = {};
+	ips: {[ip:string]:number} = {};
 	constructor(public mac: MacAddress) { };
 }
-interface Configuration {
-	macToName: { [mac: string]: string };
-	hostToName: { [hostname: string]: string };
-	// interval in minutes with which nmaplog.sh is called
-	logInterval: number;
-	// don't show in Graph if total time less than this (minutes)
-	ignoreLessThan: number;
-}
 interface Hosts { [mac: string]: HostInfo }
-let config: Configuration;
-interface DatesMapper {
-	mapDates(inp:Date[]):Date[];
-	getPercentageMultiply(inp:Date[]):number;
-	incrementTime(date:Date):Date;
-}
-let dailyMapper:DatesMapper = {
-	mapDates:mapToSingleDate,
-	getPercentageMultiply: dates => {let min = d3.min(dates), max = d3.max(dates); return 1/((max.getTime() - min.getTime())/1000/60/60/24);},
-	incrementTime: (date) => addHours(1,date)
-}
-let globalMapper:DatesMapper = {
-	mapDates: d=> d,
-	getPercentageMultiply: d => 1/3,
-	incrementTime: date => addHours(3, date)
-}
-function mapToSingleDate(dates: Date[]) {
-	dates = dates.map(date => {
-		date = new Date(date.toString());
-		date.setFullYear(1970);
-		date.setMonth(0, 1);
-		return date;
-	});
-	return dates;
-}
-function addHours(hours: number, date: Date) {
+var config: Configuration;
+function roundDate(date: Date, hours:number) {
 	date = new Date(date.toString());
-	date.setHours(date.getHours() + hours);
+	date.setHours(date.getHours() - date.getHours()%hours);
+	date.setMinutes(0,0,0);
 	return date;
 }
+function mapToGlobal(date: Date) {
+	return roundDate(date, 3);
+}
+function mapToSingleDate(date: Date) {
+	date = roundDate(date, 1);
+	date.setFullYear(1970);
+	date.setMonth(0, 1);
+	return date;
+}
+function mapToWeek(date: Date) {
+	date = roundDate(date, 3);
+	date.setFullYear(1970);
+	date.setMonth(0,date.getDay()+5);
+	return date;
+}
+
+let charts = [
+	{container:'#globalChart', title:"Uptime percentage by date", mapper:mapToGlobal},
+	{container:"#dailyChart", title:"Uptime percentage by day time", mapper:mapToSingleDate},
+	{container:"#weeklyChart", title:"Uptime percentage by week day", mapper:mapToWeek,
+		config: {xAxis: {labels: {formatter: function(){return `${"Su,Mo,Tu,We,Th,Fr,Sa,Su".split(",")[new Date(this.value).getDay()]}`}}}}
+	},
+];
+interface ParentElement extends Element {
+	children: Array<ParentElement>;
+}
 module Parser {
-	function parse(hosts: Hosts, d: Document) {
-		let $doc = $(d);
-		let time = new Date(1000 * +$doc.children("nmaprun").attr("start"));
+	function parse(hosts: Hosts, nmapRun: ParentElement) {
+		let time = new Date(1000 * +nmapRun.getAttribute("start"));
 		if (time < new Date(2000, 0)) return;
-		$doc.find("host").each((i, e) => {
-			let $e = $(e);
-			let macAtt = $e.children("address[addrtype=mac]");
-			let mac = macAtt.attr("addr"), vendor = macAtt.attr("vendor");
-			let ip = $e.children("address[addrtype=ipv4]").attr("addr");
-			let hostname = $e.find("hostname[type=PTR]").attr("name");
+		for(let i = 0; i < nmapRun.children.length; i++) {
+			let h = nmapRun.children[i];
+			if(h.nodeName !== 'host') continue;
+			let mac = '', vendor = '', ip = '', hostname = '';
+			for(let j = 0; j < h.children.length; j++) {
+				let a = h.children[j];
+				if(a instanceof Element) {
+					if(a.nodeName === 'address') {
+						let type = a.getAttribute("addrtype");
+						if(type ==='mac') { 
+							mac = a.getAttribute("addr");
+							vendor = a.getAttribute("vendor");
+						} else if(type ==='ipv4') {
+							ip = a.getAttribute("addr");
+						}
+					} else if(a.nodeName === 'hostnames') {
+						if(a.children.length > 0)
+							hostname = a.children[0].getAttribute("name");
+					}
+				}
+			}
 			hosts[mac] = hosts[mac] || new HostInfo(new MacAddress(mac, vendor));
 			let lastTime = hosts[mac].times[hosts[mac].times.length - 1];
 			if (lastTime !== time)
 				hosts[mac].times.push(time);
-			if (hosts[mac].ips.indexOf(ip) < 0)
-				hosts[mac].ips.push(ip);
-			if (hostname && hosts[mac].hostnames.indexOf(hostname) < 0)
-				hosts[mac].hostnames.push(hostname);
-		});
+			hosts[mac].ips[ip] = hosts[mac].ips[ip] + 1 || 1;
+			hosts[mac].hostnames[hostname] = hosts[mac].hostnames[hostname] + 1 || 1;
+		}
 	}
 	export function parseAll(list: string) {
 		let hosts: Hosts = {};
+		let parser = new DOMParser();
 		list.split("<?xml version").filter(doc => doc.length > 0)
-			.forEach(doc => parse(hosts, $.parseXML("<?xml version" + doc)));
+			.forEach(doc => parse(hosts, <any>parser.parseFromString("<?xml version" + doc, "text/xml").documentElement));
 		return hosts;
 	}
 }
 function getname(host: HostInfo) {
+	let names = Object.keys(host.hostnames);
 	let explicitName = config.macToName[host.mac.addr]
-		|| host.hostnames.map(h => config.hostToName[h]).filter(name => !!name)[0];
+		|| names.map(h => config.hostToName[h]).filter(name => !!name)[0];
 	if (explicitName) return explicitName;
-	if (host.hostnames[0] && host.hostnames[0].indexOf("android") == 0 && host.mac.vendor)
+	if (names[0] && names[0].indexOf("android") == 0 && host.mac.vendor)
 		return `Android von ${host.mac.vendor.split(" ").slice(0, 2).join(" ") }`;
-	return host.hostnames[0] || host.mac.addr;
+	return names[0] || host.mac.addr;
 }
 function totable(data: any[]) {
 	let table = $("<table class='table'>");
@@ -91,15 +99,6 @@ function totable(data: any[]) {
 		.map(row => $("<tr>").append(row.map(val => $("<td>").text(val)))));
 	return table;
 }
-let makeBins = (begin: Date, end: Date, incrementTime: (d: Date) => Date) => {
-	begin.setHours(0, 0, 0, 0);
-	let thresholds = [+begin];
-	while (begin < end) {
-		begin = incrementTime(begin);
-		thresholds.push(+begin);
-	}
-	return thresholds;
-}
 function getTable(hosts: Hosts) {
 	return totable(
 		Object.keys(hosts).map(mac => hosts[mac])
@@ -108,14 +107,32 @@ function getTable(hosts: Hosts) {
 				({
 					Name: getname(host),
 					Mac: host.mac.addr,
-					Hostnames: host.hostnames.join(", "),
-					IPs: host.ips.join(", "),
+					Hostnames: Object.keys(host.hostnames).join(", "),
+					IPs: Object.keys(host.ips).join(", "),
 					Uptime: (host.times.length / 6).toFixed(1) + " hours"
 				})
 			));
 }
-function getChart(title:string, hosts: Hosts, mapDates: DatesMapper) {
-	return {
+function getChart(self:HostInfo, title:string, hosts: Hosts, mapDate: (d:Date) => Date, configChanges = {}) {
+	let allPoints:{host:HostInfo, time:Date}[] = [];
+	let filteredHosts = Object.keys(hosts).map(h => hosts[h]).filter(h =>
+		h.times.length * config.logInterval > config.ignoreLessThan
+	);
+	filteredHosts.forEach(h => h.times.map(time => allPoints.push({host:h, time:time})));
+	let lookup:{[mac:string]:number} = {};
+	filteredHosts.forEach((h,i) => lookup[h.mac.addr] = i);
+	let bins:{[time:string]:{[mac:string]:number}} = {};
+	for(let point of allPoints) {
+		let x = mapDate(point.time).getTime();
+		let mac = point.host.mac.addr;
+		if(!bins[x]) bins[x] = {};
+		bins[x][mac] = bins[x][mac]+1 || 1;
+	}
+	let series = filteredHosts.map(h => ({
+		name:getname(h),
+		data:Object.keys(bins).map((time) => ({x:+time, y:100*bins[time][h.mac.addr]/bins[time][self.mac.addr]||0})).sort((a,b) => a.x-b.x)
+	}));
+	return $.extend(true, {
 		chart: { type: 'line', zoomType: 'x' },
 		title: { text: title },
 		xAxis: {
@@ -129,43 +146,22 @@ function getChart(title:string, hosts: Hosts, mapDates: DatesMapper) {
 			min: 0
 		},
 		// tooltip: {},
-		series: Object.keys(hosts).map(h => hosts[h]).filter(h => {
-			return h.times.length * config.logInterval > config.ignoreLessThan;
-		}).map(h => {
-			let multiply = mapDates.getPercentageMultiply(h.times);
-			let dates = mapDates.mapDates(h.times);
-			let min = d3.min(dates), max = d3.max(dates); 
-			return {
-				name: getname(h),
-				data: d3.layout.histogram<Date>()
-					.bins(makeBins(min, max, mapDates.incrementTime))
-					(dates)
-					.map(bin => ({ x: bin.x, y: bin.y * 100 * config.logInterval * multiply / 60 })).sort((a, b) => a.x - b.x)
-			}})
-	}
+		series: series
+	}, configChanges);
 }
 function display(hosts: Hosts) {
 	(<any>window).hosts = hosts;
 
 	$("body>div").append("<h3>Totals</h3>");
 	$("body>div").append(getTable(hosts));
-
-	$("#globalChart").highcharts(getChart("Uptime percentage by date", hosts, globalMapper));
-	$("#dailyChart").highcharts(getChart("Uptime percentage by day time", hosts, dailyMapper));
+	let selfHost = Object.keys(hosts).map(h => hosts[h]).filter(h => Object.keys(h.hostnames)[0] === config.self)[0];
+	for(let chart of charts) {
+		$(chart.container).highcharts(getChart(selfHost, chart.title, hosts, chart.mapper, (<any>chart).config));
+	}
+	//$("#weeklyChart").highcharts(getChart(selfHost, "Uptime percentage by day time", hosts, weeklyMapper));
 }
-let getdata: JQueryPromise<Hosts>;
-if (!usecache) {
-	getdata = $.get("allfiles").then(Parser.parseAll);
-} else {
-	getdata = $.get("cache.json").then((hosts: Hosts) => {
-		Object.keys(hosts).map(mac => hosts[mac]).forEach(host => host.times = host.times.map(time => new Date("" + time)));
-		return hosts;
-	});
-}
-
 Highcharts.setOptions({ global: { useUTC: false } });
 $.getJSON("config.json").then(_config => {
 	config = _config;
-	this.config = config;
-	$.when(getdata).done(hosts => display(hosts));
+	$.get(config.input).then(Parser.parseAll).then(hosts => display(hosts));
 }).fail(x => console.error(x));

@@ -3,10 +3,32 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel='stylesheet' href='bin/styles.min.css'>
 <script src="bin/libs.min.js"></script>
-<script src="bin/program.min.js"></script>
-
+<script src="bin/program.js"></script>
+<style>
+  .spinner {
+    width: 30px;
+    height: 30px;
+    background-color: #333;
+  
+    margin: 100px auto;
+    animation: rotateplane 1.2s infinite ease-in-out;
+  }
+  
+  @keyframes rotateplane {
+    0% { 
+      transform: perspective(120px) rotateX(0deg) rotateY(0deg);
+     } 50% { 
+      transform: perspective(120px) rotateX(-180.1deg) rotateY(0deg);
+    } 100% { 
+      transform: perspective(120px) rotateX(-180deg) rotateY(-179.9deg);
+    }
+  }
+</style>
 <div class="container-fluid">
-	<h1>Who's in my network?</h1>
-	<div id='globalChart'></div>
-	<div id='dailyChart'></div>
+  <h1>Who's in my network?</h1>
+  <div id='globalChart'>
+    <div class='spinner'></div>
+  </div>
+  <div id='dailyChart'></div>
+  <div id='weeklyChart'></div>
 </div>
