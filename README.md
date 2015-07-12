@@ -5,6 +5,7 @@ Logs which devices are in your local network and draws graphs
 ## Setup
 
 1. add this line to your crontab:
+
     `*/10 * * * * nmap -sn $subnet -oX - | xz >> $outputpath/logs.xz`
 
 	where
