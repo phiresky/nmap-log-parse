@@ -1,7 +1,9 @@
 interface Configuration {
-	// file containing the nmap xml logs
+	// name of the file containing the nmap xml logs
 	input: string,
+	// map from mac address to readable names for GUI display
 	macToName: { [mac: string]: string };
+	// map from host names to readable names for GUI display
 	hostToName: { [hostname: string]: string };
 	// interval in minutes with which nmaplog.sh is called
 	logInterval: number;
