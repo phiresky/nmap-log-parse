@@ -2,6 +2,10 @@
 
 Logs which devices are in your local network and draws graphs
 
+Screenshot:
+
+![Screenshot](screenshot.png)
+
 ## Setup
 
 1. add this line to your crontab:
