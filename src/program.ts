@@ -109,7 +109,7 @@ function getTable(hosts: Hosts) {
 					Mac: host.mac.addr,
 					Hostnames: Object.keys(host.hostnames).join(", "),
 					IPs: Object.keys(host.ips).join(", "),
-					Uptime: (host.times.length / 6).toFixed(1) + " hours"
+					"Total Uptime": (host.times.length / 6).toFixed(1) + " hours"
 				})
 			));
 }
