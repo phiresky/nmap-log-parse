@@ -40,3 +40,12 @@ Screenshot:
     ```
 
 3. Open `index.html` in a browser. You will in most cases need to open it from a server (like a minimal `python3 -m http.server`) because of Cross-Domain security.
+
+
+## Contributing
+
+This project is written in TypeScript, which is basically JavaScript (ES6), but strongly typed. I can recommend [Visual Studio Code](https://code.visualstudio.com/) (on linux) for IntelliSense and Refactoring support.
+
+The code is fairly hard to read because I love lambdas. But in return the code is under 200 lines.
+
+If you have ideas to make this better please open an issue, or even better, send a pull request.
