@@ -21,7 +21,7 @@ Screenshot:
     - $subnet is your local network, e.g. '192.168.178.*'
     - $outputpath is the path where you want your log stored
 
-2. create a `config.json` file. For the schema see [Configuration.ts](src/Configuration.ts)
+2. create a `config.json` file in the same folder as the `index.html` is in. For the schema see [Configuration.ts](src/Configuration.ts)
 
     minimal example:
     ```json
