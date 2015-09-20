@@ -11,15 +11,11 @@ Screenshot:
 1. add this line to your crontab on your raspberry pi (or other device that is always on):
 
     `*/10 * * * * nmap -sn $subnet -oX - >> $outputpath/logs`
+
+	where
     
-    or 
-    
-    `*/10 * * * * nmap -sn $subnet -oX - | xz >> $outputpath/logs.xz`
-    
-    if you don't have a lot of space on that device.
-    
-    - $subnet is your local network, e.g. '192.168.178.*'
-    - $outputpath is the path where you want your log stored
+    - `$subnet` is your local network, e.g. '192.168.178.\*'
+    - `$outputpath` is the path where you want your log stored
 
 2. create a `config.json` file in the same folder as the `index.html` is in. For the schema see [Configuration.ts](src/Configuration.ts)
 
