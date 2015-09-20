@@ -30,7 +30,7 @@ Screenshot:
     	"macToName": {},
     	"hostToName": {},
     	"logInterval": 10,
-    	"ignoreLessThan": 3000,
+    	"ignoreLessThanPercent": 0.02,
     	"self": "raspberry-hostname"
     }
     ```

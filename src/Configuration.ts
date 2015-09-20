@@ -7,7 +7,7 @@ interface Configuration {
 	hostToName: { [hostname: string]: string };
 	// interval in minutes with which nmaplog.sh is called
 	logInterval: number;
-	// don't show in Graph if total time less than this (percent)
+	// don't show in Graph if total time less than this (proportion of total time)
 	ignoreLessThanPercent: number;
 	// host name of logging device
 	self: string;
