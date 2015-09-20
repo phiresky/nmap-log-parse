@@ -23,7 +23,7 @@ Screenshot:
 
 2. create a `config.json` file in the same folder as the `index.html` is in. For the schema see [Configuration.ts](src/Configuration.ts)
 
-    minimal example:
+    minimal example for a working `config.json`:
     ```json
     {
     	"input": "../logs",
@@ -34,4 +34,13 @@ Screenshot:
     	"self": "raspberry-hostname"
     }
     ```
+
+    If you want, you can add some readable hostnames to `macToName` or `hostToName` like this:
+
+    ```json
+    "macToName": {
+    	"AB:CD:EF:01:23": "John's PC"
+    }
+    ```
+
 3. Open `index.html` in a browser. Firefox should directly work, for Chrome you need to open it via a server (like `python3 -m http.server`) because of security reasons.
