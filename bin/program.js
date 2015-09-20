@@ -118,7 +118,7 @@ function getTable(hosts) {
             Mac: host.mac.addr,
             Hostnames: Object.keys(host.hostnames).join(", "),
             IPs: Object.keys(host.ips).join(", "),
-            Uptime: (host.times.length / 6).toFixed(1) + " hours"
+            "Total Uptime": (host.times.length / 6).toFixed(1) + " hours"
         });
     }));
 }
@@ -142,7 +142,18 @@ function getChart(self, title, hosts, mapDate, configChanges) {
     }
     var series = filteredHosts.map(function (h) { return ({
         name: getname(h),
-        data: Object.keys(bins).map(function (time) { return ({ x: +time, y: 100 * bins[time][h.mac.addr] / bins[time][self.mac.addr] || 0 }); }).sort(function (a, b) { return a.x - b.x; })
+        data: Object.keys(bins).map(function (time) {
+            var bin = bins[time];
+            var selfTime = 0;
+            if (self) {
+                selfTime = bin[self.mac.addr];
+            }
+            else {
+                // use maximum ontime of any device instead
+                selfTime = Math.max.apply(Math, Object.keys(bin).map(function (mac) { return bin[mac]; }));
+            }
+            return { x: +time, y: 100 * bin[h.mac.addr] / selfTime || 0 };
+        }).sort(function (a, b) { return a.x - b.x; })
     }); });
     return $.extend(true, {
         chart: { type: 'line', zoomType: 'x' },
@@ -165,11 +176,13 @@ function display(hosts) {
     $("body>div").append("<h3>Totals</h3>");
     $("body>div").append(getTable(hosts));
     var selfHost = Object.keys(hosts).map(function (h) { return hosts[h]; }).filter(function (h) { return Object.keys(h.hostnames)[0] === config.self; })[0];
+    if (!selfHost) {
+        console.log("Warning: Could not find any entries with self hostname (" + selfHost + "), calculations will be less accurate");
+    }
     for (var _i = 0; _i < charts.length; _i++) {
         var chart = charts[_i];
         $(chart.container).highcharts(getChart(selfHost, chart.title, hosts, chart.mapper, chart.config));
     }
-    //$("#weeklyChart").highcharts(getChart(selfHost, "Uptime percentage by day time", hosts, weeklyMapper));
 }
 Highcharts.setOptions({ global: { useUTC: false } });
 $.getJSON("config.json").then(function (_config) {

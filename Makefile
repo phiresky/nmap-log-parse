@@ -3,7 +3,7 @@ all: bin/styles.min.css bin/program.js bin/libs.min.js
 bin/styles.min.css: lib/bootstrap.min.css
 	cat $^ > bin/styles.min.css
 
-bin/program.js:
+bin/program.js: $(wildcard src/*.ts)
 	tsc
 
 bin/libs.min.js: lib/jquery.min.js lib/bootstrap.min.js lib/highstock.js lib/d3.min.js

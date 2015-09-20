@@ -130,7 +130,17 @@ function getChart(self:HostInfo, title:string, hosts: Hosts, mapDate: (d:Date) =
 	}
 	let series = filteredHosts.map(h => ({
 		name:getname(h),
-		data:Object.keys(bins).map((time) => ({x:+time, y:100*bins[time][h.mac.addr]/bins[time][self.mac.addr]||0})).sort((a,b) => a.x-b.x)
+		data:Object.keys(bins).map((time) => {
+			const bin = bins[time];
+			let selfTime = 0;
+			if(self) {
+				selfTime = bin[self.mac.addr];
+			} else {
+				// use maximum ontime of any device instead
+				selfTime = Math.max(...Object.keys(bin).map(mac => bin[mac]));
+			}
+			return {x:+time, y:100*bin[h.mac.addr]/selfTime||0};
+		}).sort((a,b) => a.x-b.x)
 	}));
 	return $.extend(true, {
 		chart: { type: 'line', zoomType: 'x' },
@@ -155,10 +165,12 @@ function display(hosts: Hosts) {
 	$("body>div").append("<h3>Totals</h3>");
 	$("body>div").append(getTable(hosts));
 	let selfHost = Object.keys(hosts).map(h => hosts[h]).filter(h => Object.keys(h.hostnames)[0] === config.self)[0];
+	if(!selfHost) {
+		console.log(`Warning: Could not find any entries with self hostname (${selfHost}), calculations will be less accurate`);
+	}
 	for(let chart of charts) {
 		$(chart.container).highcharts(getChart(selfHost, chart.title, hosts, chart.mapper, (<any>chart).config));
 	}
-	//$("#weeklyChart").highcharts(getChart(selfHost, "Uptime percentage by day time", hosts, weeklyMapper));
 }
 Highcharts.setOptions({ global: { useUTC: false } });
 $.getJSON("config.json").then(_config => {
