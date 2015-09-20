@@ -184,9 +184,12 @@ function display(hosts) {
         $(chart.container).highcharts(getChart(selfHost, chart.title, hosts, chart.mapper, chart.config));
     }
 }
+function showError(error) {
+    $(".container-fluid").prepend("<div class=\"alert alert-danger\">Error: " + JSON.stringify(error) + "</div>");
+}
 Highcharts.setOptions({ global: { useUTC: false } });
 $.getJSON("config.json").then(function (_config) {
     config = _config;
-    $.get(config.input).then(Parser.parseAll).then(function (hosts) { return display(hosts); });
-}).fail(function (x) { return console.error(x); });
+    $.get(config.input).then(Parser.parseAll).then(function (hosts) { return display(hosts); }).fail(function (s) { return showError("getting " + config.input + ": " + s.statusText); });
+}).fail(function (s) { return showError("getting config.json: " + s.statusText); });
 //# sourceMappingURL=program.js.map

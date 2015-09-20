@@ -172,8 +172,11 @@ function display(hosts: Hosts) {
 		$(chart.container).highcharts(getChart(selfHost, chart.title, hosts, chart.mapper, (<any>chart).config));
 	}
 }
+function showError(error: any) {
+	$(".container-fluid").prepend(`<div class="alert alert-danger">Error: ${JSON.stringify(error)}</div>`);
+}
 Highcharts.setOptions({ global: { useUTC: false } });
 $.getJSON("config.json").then(_config => {
 	config = _config;
-	$.get(config.input).then(Parser.parseAll).then(hosts => display(hosts));
-}).fail(x => console.error(x));
+	$.get(config.input).then(Parser.parseAll).then(hosts => display(hosts)).fail(s => showError(`getting ${config.input}: ${s.statusText}`));
+}).fail(s => showError(`getting config.json: ${s.statusText}`));
