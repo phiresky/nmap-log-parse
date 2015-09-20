@@ -8,7 +8,7 @@ Screenshot:
 
 ## Setup
 
-1. add this line to your crontab on your raspberry pi (or other device that is always on):
+1. add this line to your root crontab on your raspberry pi (or other device that is always on):
 
     `*/10 * * * * nmap -sn $subnet -oX - >> $outputpath/logs`
 
@@ -16,6 +16,8 @@ Screenshot:
     
     - `$subnet` is your local network, e.g. '192.168.178.\*'
     - `$outputpath` is the path where you want your log stored
+
+	You can edit the crontab by running something like `sudo EDITOR=nano crontab -e`
 
 2. create a `config.json` file in the same folder as the `index.html` is in. For the schema see [Configuration.ts](src/Configuration.ts)
 
