@@ -118,15 +118,16 @@ function getTable(hosts) {
             Mac: host.mac.addr,
             Hostnames: Object.keys(host.hostnames).join(", "),
             IPs: Object.keys(host.ips).join(", "),
-            "Total Uptime": (host.times.length / 6).toFixed(1) + " hours"
+            "Total Uptime": (host.times.length * config.logInterval / 60).toFixed(1) + " hours"
         });
     }));
 }
 function getChart(self, title, hosts, mapDate, configChanges) {
     if (configChanges === void 0) { configChanges = {}; }
     var allPoints = [];
+    var maximumUptime = Math.max.apply(Math, Object.keys(hosts).map(function (h) { return hosts[h].times.length; }));
     var filteredHosts = Object.keys(hosts).map(function (h) { return hosts[h]; }).filter(function (h) {
-        return h.times.length * config.logInterval > config.ignoreLessThan;
+        return !config.ignoreLessThanPercent || (h.times.length / maximumUptime > config.ignoreLessThanPercent);
     });
     filteredHosts.forEach(function (h) { return h.times.map(function (time) { return allPoints.push({ host: h, time: time }); }); });
     var lookup = {};

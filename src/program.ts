@@ -109,14 +109,15 @@ function getTable(hosts: Hosts) {
 					Mac: host.mac.addr,
 					Hostnames: Object.keys(host.hostnames).join(", "),
 					IPs: Object.keys(host.ips).join(", "),
-					"Total Uptime": (host.times.length / 6).toFixed(1) + " hours"
+					"Total Uptime": (host.times.length * config.logInterval / 60).toFixed(1) + " hours"
 				})
 			));
 }
 function getChart(self:HostInfo, title:string, hosts: Hosts, mapDate: (d:Date) => Date, configChanges = {}) {
 	let allPoints:{host:HostInfo, time:Date}[] = [];
+	let maximumUptime = Math.max(...Object.keys(hosts).map(h => hosts[h].times.length));
 	let filteredHosts = Object.keys(hosts).map(h => hosts[h]).filter(h =>
-		h.times.length * config.logInterval > config.ignoreLessThan
+		!config.ignoreLessThanPercent || (h.times.length / maximumUptime > config.ignoreLessThanPercent)
 	);
 	filteredHosts.forEach(h => h.times.map(time => allPoints.push({host:h, time:time})));
 	let lookup:{[mac:string]:number} = {};

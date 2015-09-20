@@ -8,7 +8,7 @@ Screenshot:
 
 ## Setup
 
-1. add this line to your root crontab on your raspberry pi (or other device that is always on):
+1. add this line to your **root** crontab on your raspberry pi (or other device that is always on):
 
     `*/10 * * * * nmap -sn $subnet -oX - >> $outputpath/logs`
 
@@ -18,6 +18,8 @@ Screenshot:
     - `$outputpath` is the path where you want your log stored
 
 	You can edit the crontab by running something like `sudo EDITOR=nano crontab -e`
+
+	**This *must* be run as root!** Otherwise, Mac-Addresses cannot be read and the output will be wrong.
 
 2. create a `config.json` file in the same folder as the `index.html` is in. For the schema see [Configuration.ts](src/Configuration.ts)
 
@@ -41,7 +43,7 @@ Screenshot:
     }
     ```
 
-3. Wait more than 10 minutes. Make sure the `logs` file exists and contains an XML document
+3. Wait more than an hour. Make sure the `logs` file exists and contains an XML document.
 4. Open `index.html` in a browser. You will in most cases need to open it from a server (like a minimal `python3 -m http.server`) because of Cross-Domain security.
 
 
