@@ -41,7 +41,8 @@ Screenshot:
     }
     ```
 
-3. Open `index.html` in a browser. You will in most cases need to open it from a server (like a minimal `python3 -m http.server`) because of Cross-Domain security.
+3. Wait more than 10 minutes. Make sure the `logs` file exists and contains an XML document
+4. Open `index.html` in a browser. You will in most cases need to open it from a server (like a minimal `python3 -m http.server`) because of Cross-Domain security.
 
 
 ## Contributing
