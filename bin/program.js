@@ -110,6 +110,7 @@ function totable(data) {
     return table;
 }
 function getTable(hosts) {
+    var maxTime = Math.max.apply(Math, Object.keys(hosts).map(function (mac) { return hosts[mac].times.length; }));
     return totable(Object.keys(hosts).map(function (mac) { return hosts[mac]; })
         .sort(function (a, b) { return b.times.length - a.times.length; })
         .map(function (host) {
@@ -118,11 +119,12 @@ function getTable(hosts) {
             Mac: host.mac.addr,
             Hostnames: Object.keys(host.hostnames).join(", "),
             IPs: Object.keys(host.ips).join(", "),
-            "Total Uptime": (host.times.length * config.logInterval / 60).toFixed(1) + " hours"
+            "Total Uptime": (host.times.length * config.logInterval / 60).toFixed(1) + " hours",
+            "Average Uptime": (host.times.length / maxTime * 100).toFixed(1) + "%"
         });
     }));
 }
-function getChart(self, title, hosts, mapDate, configChanges) {
+function getChart(title, hosts, mapDate, configChanges) {
     if (configChanges === void 0) { configChanges = {}; }
     var allPoints = [];
     var maximumUptime = Math.max.apply(Math, Object.keys(hosts).map(function (h) { return hosts[h].times.length; }));
@@ -145,15 +147,8 @@ function getChart(self, title, hosts, mapDate, configChanges) {
         name: getname(h),
         data: Object.keys(bins).map(function (time) {
             var bin = bins[time];
-            var selfTime = 0;
-            if (self) {
-                selfTime = bin[self.mac.addr];
-            }
-            else {
-                // use maximum ontime of any device instead
-                selfTime = Math.max.apply(Math, Object.keys(bin).map(function (mac) { return bin[mac]; }));
-            }
-            return { x: +time, y: 100 * bin[h.mac.addr] / selfTime || 0 };
+            var maxTime = Math.max.apply(Math, Object.keys(bin).map(function (mac) { return bin[mac]; }));
+            return { x: +time, y: 100 * bin[h.mac.addr] / maxTime || 0 };
         }).sort(function (a, b) { return a.x - b.x; })
     }); });
     return $.extend(true, {
@@ -176,13 +171,9 @@ function display(hosts) {
     window.hosts = hosts;
     $("body>div").append("<h3>Totals</h3>");
     $("body>div").append(getTable(hosts));
-    var selfHost = Object.keys(hosts).map(function (h) { return hosts[h]; }).filter(function (h) { return Object.keys(h.hostnames)[0] === config.self; })[0];
-    if (!selfHost) {
-        console.log("Warning: Could not find any entries with self hostname (" + selfHost + "), calculations will be less accurate");
-    }
     for (var _i = 0; _i < charts.length; _i++) {
         var chart = charts[_i];
-        $(chart.container).highcharts(getChart(selfHost, chart.title, hosts, chart.mapper, chart.config));
+        $(chart.container).highcharts(getChart(chart.title, hosts, chart.mapper, chart.config));
     }
 }
 function showError(error) {

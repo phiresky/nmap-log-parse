@@ -100,6 +100,7 @@ function totable(data: any[]) {
 	return table;
 }
 function getTable(hosts: Hosts) {
+	const maxTime = Math.max(...Object.keys(hosts).map(mac => hosts[mac].times.length));
 	return totable(
 		Object.keys(hosts).map(mac => hosts[mac])
 			.sort((a, b) => b.times.length - a.times.length)
@@ -109,11 +110,12 @@ function getTable(hosts: Hosts) {
 					Mac: host.mac.addr,
 					Hostnames: Object.keys(host.hostnames).join(", "),
 					IPs: Object.keys(host.ips).join(", "),
-					"Total Uptime": (host.times.length * config.logInterval / 60).toFixed(1) + " hours"
+					"Total Uptime": (host.times.length * config.logInterval / 60).toFixed(1) + " hours",
+					"Average Uptime": (host.times.length / maxTime * 100).toFixed(1) + "%"
 				})
 			));
 }
-function getChart(self:HostInfo, title:string, hosts: Hosts, mapDate: (d:Date) => Date, configChanges = {}) {
+function getChart(title:string, hosts: Hosts, mapDate: (d:Date) => Date, configChanges = {}) {
 	let allPoints:{host:HostInfo, time:Date}[] = [];
 	let maximumUptime = Math.max(...Object.keys(hosts).map(h => hosts[h].times.length));
 	let filteredHosts = Object.keys(hosts).map(h => hosts[h]).filter(h =>
@@ -133,14 +135,8 @@ function getChart(self:HostInfo, title:string, hosts: Hosts, mapDate: (d:Date) =
 		name:getname(h),
 		data:Object.keys(bins).map((time) => {
 			const bin = bins[time];
-			let selfTime = 0;
-			if(self) {
-				selfTime = bin[self.mac.addr];
-			} else {
-				// use maximum ontime of any device instead
-				selfTime = Math.max(...Object.keys(bin).map(mac => bin[mac]));
-			}
-			return {x:+time, y:100*bin[h.mac.addr]/selfTime||0};
+			const maxTime = Math.max(...Object.keys(bin).map(mac => bin[mac]));
+			return {x:+time, y:100*bin[h.mac.addr]/maxTime||0};
 		}).sort((a,b) => a.x-b.x)
 	}));
 	return $.extend(true, {
@@ -165,12 +161,8 @@ function display(hosts: Hosts) {
 
 	$("body>div").append("<h3>Totals</h3>");
 	$("body>div").append(getTable(hosts));
-	let selfHost = Object.keys(hosts).map(h => hosts[h]).filter(h => Object.keys(h.hostnames)[0] === config.self)[0];
-	if(!selfHost) {
-		console.log(`Warning: Could not find any entries with self hostname (${selfHost}), calculations will be less accurate`);
-	}
 	for(let chart of charts) {
-		$(chart.container).highcharts(getChart(selfHost, chart.title, hosts, chart.mapper, (<any>chart).config));
+		$(chart.container).highcharts(getChart(chart.title, hosts, chart.mapper, (<any>chart).config));
 	}
 }
 function showError(error: any) {

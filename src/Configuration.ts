@@ -9,6 +9,4 @@ interface Configuration {
 	logInterval: number;
 	// don't show in Graph if total time less than this (proportion of total time)
 	ignoreLessThanPercent: number;
-	// host name of logging device
-	self: string;
 }
