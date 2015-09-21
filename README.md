@@ -16,10 +16,20 @@ Screenshot:
     
     - `$subnet` is your local network, e.g. '192.168.178.\*'
     - `$outputpath` is the path where you want your log stored
+    
+    If you don't have a lot of space (the above takes ~10MB / month), you can also compress the logs:
+    
+    `*/10 * * * * nmap -sn $subnet -oX - |bzip2 >> $outputpath/logs.bz2`
+    
+    and optionally recompress them every Sunday at 03:02 AM: (combining the individual compression streams saving a lot of space)
+    
+    `3 3 * * 0 bunzip2 $outputpath/logs.bz2 && bzip2 $outputpath/logs`
+    
+    This will make the browser loading slightly slower, but the logs will be smaller (200kB / month)
 
 	You can edit the crontab by running something like `sudo EDITOR=nano crontab -e`
 
-	**This *must* be run as root!** Otherwise, Mac-Addresses cannot be read and the output will be wrong.
+	**nmap *must* be run as root!** Otherwise, Mac-Addresses cannot be read and the output will be wrong.
 
 2. create a `config.json` file in the same folder as the `index.html` is in. For the schema see [Configuration.ts](src/Configuration.ts)
 
