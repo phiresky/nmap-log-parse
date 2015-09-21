@@ -179,9 +179,70 @@ function display(hosts) {
 function showError(error) {
     $(".container-fluid").prepend("<div class=\"alert alert-danger\">Error: " + JSON.stringify(error) + "</div>");
 }
+function getAndDecompress(fname) {
+    if (fname.indexOf(".") >= 0) {
+        if (fname.substr(fname.indexOf(".")) === ".bz2") {
+            console.log("decompressing " + fname);
+            return $.ajax({
+                url: fname,
+                type: 'GET',
+                dataType: 'binary',
+                processData: false,
+            }).then(function (data) {
+                var stream = bzip2.array(new Uint8Array(data));
+                var output = "";
+                var i = 0;
+                while (true) {
+                    try {
+                        output += bzip2.simple(stream);
+                        stream(8 * 4); // skip crc
+                        while (stream("bit") != 0)
+                            stream(1); // align
+                    }
+                    catch (e) {
+                        if (e === "No magic number found")
+                            break;
+                        throw e;
+                    }
+                    i++;
+                }
+                console.log("decompressed " + i + " chunks");
+                return output;
+            });
+        }
+    }
+    return $.get(config.input);
+}
 Highcharts.setOptions({ global: { useUTC: false } });
-$.getJSON("config.json").then(function (_config) {
-    config = _config;
-    $.get(config.input).then(Parser.parseAll).then(function (hosts) { return display(hosts); }).fail(function (s) { return showError("getting " + config.input + ": " + s.statusText); });
-}).fail(function (s) { return showError("getting config.json: " + s.statusText); });
+$(function () {
+    $.getJSON("config.json").then(function (_config) {
+        config = _config;
+        getAndDecompress(config.input).then(Parser.parseAll).then(function (hosts) { return display(hosts); }).fail(function (s) { return showError("getting " + config.input + ": " + s.statusText); });
+    }).fail(function (s) { return showError("getting config.json: " + s.statusText); });
+});
+// utility: binary ajax
+/** @author Henry Algus <henryalgus@gmail.com> */
+$.ajaxTransport("+binary", function (options, originalOptions, jqXHR) {
+    return {
+        send: function (headers, callback) {
+            var xhr = new XMLHttpRequest(), url = options.url, type = options.type, async = options.async || true, dataType = "arraybuffer", data = options.data || null, username = options.username || null, password = options.password || null;
+            xhr.addEventListener('load', function () {
+                var data = {};
+                data[options.dataType] = xhr.response;
+                // make callback and send data
+                callback(xhr.status, xhr.statusText, data, xhr.getAllResponseHeaders());
+            });
+            xhr.open(type, url, async, username, password);
+            // setup custom headers
+            for (var i in headers) {
+                xhr.setRequestHeader(i, headers[i]);
+            }
+            xhr.responseType = dataType;
+            xhr.send(data);
+        },
+        abort: function () {
+            jqXHR.abort();
+        }
+    };
+});
 //# sourceMappingURL=program.js.map

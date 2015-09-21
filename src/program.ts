@@ -168,8 +168,80 @@ function display(hosts: Hosts) {
 function showError(error: any) {
 	$(".container-fluid").prepend(`<div class="alert alert-danger">Error: ${JSON.stringify(error)}</div>`);
 }
+declare var  bzip2:any;
+function getAndDecompress(fname: string): JQueryPromise<string> {
+	if(fname.indexOf(".") >= 0) {
+		if(fname.substr(fname.indexOf(".")) === ".bz2") {
+			console.log("decompressing "+fname);
+			return $.ajax({
+				url: fname,
+				type: 'GET',
+				dataType: 'binary',
+				processData: false,
+			}).then(data => {
+				const stream = bzip2.array(new Uint8Array(data));
+				let output = "";
+				let i = 0;
+				while(true) {
+					try {
+						output += bzip2.simple(stream);
+						stream(8*4); // skip crc
+						while(stream("bit") != 0) stream(1); // align
+					} catch(e) {
+						if(e === "No magic number found") break;
+						throw e;
+					}
+					i++;
+				}
+				console.log(`decompressed ${i} chunks`);
+				return output;
+			});
+		}
+	}
+	return $.get(config.input);
+}
 Highcharts.setOptions({ global: { useUTC: false } });
-$.getJSON("config.json").then(_config => {
-	config = _config;
-	$.get(config.input).then(Parser.parseAll).then(hosts => display(hosts)).fail(s => showError(`getting ${config.input}: ${s.statusText}`));
-}).fail(s => showError(`getting config.json: ${s.statusText}`));
+$(function() {
+	$.getJSON("config.json").then(_config => {
+		config = _config;
+		getAndDecompress(config.input).then(Parser.parseAll).then(hosts => display(hosts)).fail(s => showError(`getting ${config.input}: ${s.statusText}`));
+	}).fail(s => showError(`getting config.json: ${s.statusText}`));
+});
+
+
+// utility: binary ajax
+/** @author Henry Algus <henryalgus@gmail.com> */
+(<any>$).ajaxTransport("+binary", function(options:any, originalOptions:any, jqXHR:any){
+	return {
+		send: function(headers:any, callback:any) {
+			var xhr = new XMLHttpRequest(),
+				url = options.url,
+				type = options.type,
+				async = options.async || true,
+				dataType = "arraybuffer",
+				data = options.data || null,
+				username = options.username || null,
+				password = options.password || null;
+						
+			xhr.addEventListener('load', function(){
+				var data:any = {};
+				data[options.dataType] = xhr.response;
+				// make callback and send data
+				callback(xhr.status, xhr.statusText, data, xhr.getAllResponseHeaders());
+			});
+		
+			xhr.open(type, url, async, username, password);
+					
+			// setup custom headers
+			for (var i in headers ) {
+				xhr.setRequestHeader(i, headers[i] );
+			}
+			
+			xhr.responseType = dataType;
+			xhr.send(data);
+		},
+		abort: function(){
+			jqXHR.abort();
+		}
+	};
+});
