@@ -27,9 +27,11 @@ Screenshot:
     
     This will make the browser loading slightly slower, but the logs will be smaller (200kB / month)
 
-	You can edit the crontab by running something like `sudo EDITOR=nano crontab -e`
+    **the above command *must* be put into the root crontab!** 
 
-	**nmap *must* be run as root!** Otherwise, Mac-Addresses cannot be read and the output will be wrong.
+    You can edit the root crontab by running something like `sudo EDITOR=nano crontab -e`
+    
+    Otherwise, nmap can't read mac-addresses and the output will be wrong.
 
 2. create a `config.json` file in the same folder as the `index.html` is in. For the schema see [Configuration.ts](src/Configuration.ts)
 
