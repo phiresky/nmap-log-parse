@@ -8,37 +8,37 @@ class HostInfo {
 	constructor(public mac: MacAddress) { };
 }
 interface Hosts { [mac: string]: HostInfo }
-var config: Configuration;
-function roundDate(date: Date, hours:number) {
-	date = new Date(date.toString());
+let config: Configuration;
+function roundDate(date: Date, hours:number, minutes:number=60) {
+	date = new Date(date.toString()); // preserve timezone information
 	date.setHours(date.getHours() - date.getHours()%hours);
-	date.setMinutes(0,0,0);
-	return date;
-}
-function mapToGlobal(date: Date) {
-	return roundDate(date, 3);
-}
-function mapToSingleDate(date: Date) {
-	date = roundDate(date, 1);
-	date.setFullYear(1970);
-	date.setMonth(0, 1);
-	return date;
-}
-function mapToWeek(date: Date) {
-	date = roundDate(date, 3);
-	date.setFullYear(1970);
-	date.setMonth(0,date.getDay()+5);
+	date.setMinutes(date.getMinutes() - date.getMinutes()%minutes, 0, 0);
 	return date;
 }
 
-let charts = [
-	{container:'#globalChart', title:"Uptime percentage by date", mapper:mapToGlobal, config: {}},
-	{container:"#dailyChart", title:"Uptime percentage by day time", mapper:mapToSingleDate, config: {
-		tooltip: { headerFormat: `<span style="font-size: 10px">{point.key:%H:%M:%S}</span><br/>`}
-	}},
-	{container:"#weeklyChart", title:"Uptime percentage by week day", mapper:mapToWeek,
+const aggregateSpans: {[name:string]: (date: Date) => Date} = {
+	"20 minutes": date => roundDate(date, 1, 20),
+	"30 minutes": date => roundDate(date, 1, 30),
+	"1 hour": date => roundDate(date, 1),
+	"3 hours": date => roundDate(date, 3),
+	"12 hours": date => roundDate(date, 12),
+	"1 day": date => roundDate(date, 24),
+}
+interface ChartConfig {
+	container: string, title: string, aggregate: string, config: {}, offset?: (d:Date) => Date
+}
+const charts: ChartConfig[] = [
+	{container:".global.chart", title:"Uptime percentage by date", aggregate: "3 hours", config: {}},
+	{container:".daily.chart", title:"Uptime percentage by day time", aggregate: "1 hour",
+		offset: (date: Date) => {date.setFullYear(1970); date.setMonth(0,1); return date},
 		config: {
-			tooltip: { headerFormat: `<span style="font-size: 10px">{point.key:%A %H:%M:%S}</span><br/>`},
+			tooltip: { headerFormat: `<span style="font-size: 10px">{point.key:%H:%M}</span><br/>`}
+		}
+	},
+	{container:".weekly.chart", title:"Uptime percentage by week day", aggregate: "3 hours",
+		offset: (date: Date) => {date.setFullYear(1970); date.setMonth(0,date.getDay()+5); return date},
+		config: {
+			tooltip: { headerFormat: `<span style="font-size: 10px">{point.key:%A %H:%M}</span><br/>`},
 			xAxis: {labels: {format: "{value:%a}"}
 		}
 	}}
@@ -120,7 +120,7 @@ function getTable(hosts: Hosts) {
 				})
 			));
 }
-function getChart(title:string, hosts: Hosts, mapDate: (d:Date) => Date, configChanges = {}) {
+function getChartConfiguration(hosts: Hosts, cConf: ChartConfig, target: Element) {
 	let allPoints:{host:HostInfo, time:Date}[] = [];
 	let maximumUptime = Math.max(...Object.keys(hosts).map(h => hosts[h].times.length));
 	let filteredHosts = Object.keys(hosts).map(h => hosts[h]).filter(h =>
@@ -131,8 +131,10 @@ function getChart(title:string, hosts: Hosts, mapDate: (d:Date) => Date, configC
 	filteredHosts.forEach((h,i) => lookup[h.mac.addr] = i);
 	let bins:{[time:string]:{[mac:string]:number}} = {};
 	for(let point of allPoints) {
-		let x = mapDate(point.time).getTime();
-		let mac = point.host.mac.addr;
+		let date = aggregateSpans[cConf.aggregate || "1 hour"](point.time); 
+		if(cConf.offset) date = cConf.offset(date);
+		const x = date.getTime();
+		const mac = point.host.mac.addr;
 		if(!bins[x]) bins[x] = {};
 		bins[x][mac] = bins[x][mac]+1 || 1;
 	}
@@ -141,17 +143,17 @@ function getChart(title:string, hosts: Hosts, mapDate: (d:Date) => Date, configC
 		data:Object.keys(bins).map((time) => {
 			const bin = bins[time];
 			const maxTime = Math.max(...Object.keys(bin).map(mac => bin[mac]));
-			return {x:+time, y:100*bin[h.mac.addr]/maxTime||0};
-		}).sort((a,b) => a.x-b.x)
+			return [+time, 100*bin[h.mac.addr]/maxTime||0];
+		}).sort(([x1,y1],[x2,y2]) => x1-x2)
 	}));
 	return $.extend(true, {
-		chart: { type: 'line', zoomType: 'x' },
-		title: { text: title },
+		chart: { type: 'line', zoomType: 'x', renderTo: target},
+		title: { text: cConf.title },
 		xAxis: {
 			type: 'datetime',
 			//minRange: 14 * 24 * 60 * 60 * 1000
 		},
-		plotOptions: { line: { marker: { enabled: false } } },
+		plotOptions: { line: { marker: { enabled: false }, animation: false } },
 		yAxis: {
 			title: { text: 'Online' },
 			labels: { format: "{value:%.0f}%" },
@@ -159,16 +161,33 @@ function getChart(title:string, hosts: Hosts, mapDate: (d:Date) => Date, configC
 		},
 		// tooltip: {},
 		series: series
-	}, configChanges);
+	}, cConf.config);
+}
+function makeSelect(value: string, callback: (aggregate: string) => void) {
+	const select = document.createElement("select");
+	Object.keys(aggregateSpans).map(name => new Option(name)).forEach(o => select.add(o));
+	select.value = value;	
+	select.addEventListener("change", e => callback(select.value));
+	return $("<p>Aggregate over </p>").append(select);
+}
+function initializeChart(hosts: Hosts, charts: ChartConfig[], index = 0) {
+	const chart = charts[index];
+	if(!chart) return;
+	const chartDiv = $("<div>").appendTo(chart.container);
+	const highchart = new Highcharts.Chart(getChartConfiguration(hosts, chart, chartDiv[0]), 
+		() => setTimeout(() => initializeChart(hosts, charts, index + 1), 0));
+	$(chart.container).append(makeSelect(chart.aggregate, (aggregate:string) => {
+		chart.aggregate = aggregate;
+		chartDiv.highcharts().destroy();
+		new Highcharts.Chart(getChartConfiguration(hosts, chart, chartDiv[0]));
+	}));
+	$(chart.container).children(".spinner").remove();
 }
 function display(hosts: Hosts) {
-	(<any>window).hosts = hosts;
+	this.hosts = hosts;
 
-	$("body>div").append("<h3>Totals</h3>");
-	$("body>div").append(getTable(hosts));
-	for(let chart of charts) {
-		$(chart.container).highcharts(getChart(chart.title, hosts, chart.mapper, chart.config));
-	}
+	$(".statistics.chart").append("<h3>Totals</h3>").append(getTable(hosts));
+	initializeChart(hosts, charts);
 }
 function showError(error: any) {
 	$(".container-fluid").prepend(`<div class="alert alert-danger">Error: ${JSON.stringify(error)}</div>`);

@@ -10,26 +10,38 @@
     width: 30px;
     height: 30px;
     background-color: #333;
-  
     margin: 100px auto;
     animation: rotateplane 1.2s infinite ease-in-out;
   }
   
+  .chart {
+    border: 1px solid gray;
+    border-radius: 1ex;
+    margin: 1em; padding: 1ex;
+  }
+  
   @keyframes rotateplane {
-    0% { 
+    0% {
       transform: perspective(120px) rotateX(0deg) rotateY(0deg);
-     } 50% { 
+    }
+    50% {
       transform: perspective(120px) rotateX(-180.1deg) rotateY(0deg);
-    } 100% { 
+    }
+    100% {
       transform: perspective(120px) rotateX(-180deg) rotateY(-179.9deg);
     }
   }
 </style>
 <div class="container-fluid">
   <h1>Who's in my network?</h1>
-  <div id='globalChart'>
+  <div class="global chart">
     <div class='spinner'></div>
   </div>
-  <div id='dailyChart'></div>
-  <div id='weeklyChart'></div>
+  <div class="daily chart">
+    <div class='spinner'></div>
+  </div>
+  <div class="weekly chart">
+    <div class='spinner'></div>
+  </div>
+  <div class="statistics chart"></div>
 </div>

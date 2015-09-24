@@ -16,35 +16,33 @@ var HostInfo = (function () {
     return HostInfo;
 })();
 var config;
-function roundDate(date, hours) {
-    date = new Date(date.toString());
+function roundDate(date, hours, minutes) {
+    if (minutes === void 0) { minutes = 60; }
+    date = new Date(date.toString()); // preserve timezone information
     date.setHours(date.getHours() - date.getHours() % hours);
-    date.setMinutes(0, 0, 0);
+    date.setMinutes(date.getMinutes() - date.getMinutes() % minutes, 0, 0);
     return date;
 }
-function mapToGlobal(date) {
-    return roundDate(date, 3);
-}
-function mapToSingleDate(date) {
-    date = roundDate(date, 1);
-    date.setFullYear(1970);
-    date.setMonth(0, 1);
-    return date;
-}
-function mapToWeek(date) {
-    date = roundDate(date, 3);
-    date.setFullYear(1970);
-    date.setMonth(0, date.getDay() + 5);
-    return date;
-}
+var aggregateSpans = {
+    "20 minutes": function (date) { return roundDate(date, 1, 20); },
+    "30 minutes": function (date) { return roundDate(date, 1, 30); },
+    "1 hour": function (date) { return roundDate(date, 1); },
+    "3 hours": function (date) { return roundDate(date, 3); },
+    "12 hours": function (date) { return roundDate(date, 12); },
+    "1 day": function (date) { return roundDate(date, 24); },
+};
 var charts = [
-    { container: '#globalChart', title: "Uptime percentage by date", mapper: mapToGlobal, config: {} },
-    { container: "#dailyChart", title: "Uptime percentage by day time", mapper: mapToSingleDate, config: {
-            tooltip: { headerFormat: "<span style=\"font-size: 10px\">{point.key:%H:%M:%S}</span><br/>" }
-        } },
-    { container: "#weeklyChart", title: "Uptime percentage by week day", mapper: mapToWeek,
+    { container: ".global.chart", title: "Uptime percentage by date", aggregate: "3 hours", config: {} },
+    { container: ".daily.chart", title: "Uptime percentage by day time", aggregate: "1 hour",
+        offset: function (date) { date.setFullYear(1970); date.setMonth(0, 1); return date; },
         config: {
-            tooltip: { headerFormat: "<span style=\"font-size: 10px\">{point.key:%A %H:%M:%S}</span><br/>" },
+            tooltip: { headerFormat: "<span style=\"font-size: 10px\">{point.key:%H:%M}</span><br/>" }
+        }
+    },
+    { container: ".weekly.chart", title: "Uptime percentage by week day", aggregate: "3 hours",
+        offset: function (date) { date.setFullYear(1970); date.setMonth(0, date.getDay() + 5); return date; },
+        config: {
+            tooltip: { headerFormat: "<span style=\"font-size: 10px\">{point.key:%A %H:%M}</span><br/>" },
             xAxis: { labels: { format: "{value:%a}" }
             }
         } }
@@ -129,8 +127,7 @@ function getTable(hosts) {
         });
     }));
 }
-function getChart(title, hosts, mapDate, configChanges) {
-    if (configChanges === void 0) { configChanges = {}; }
+function getChartConfiguration(hosts, cConf, target) {
     var allPoints = [];
     var maximumUptime = Math.max.apply(Math, Object.keys(hosts).map(function (h) { return hosts[h].times.length; }));
     var filteredHosts = Object.keys(hosts).map(function (h) { return hosts[h]; }).filter(function (h) {
@@ -142,7 +139,10 @@ function getChart(title, hosts, mapDate, configChanges) {
     var bins = {};
     for (var _i = 0; _i < allPoints.length; _i++) {
         var point = allPoints[_i];
-        var x = mapDate(point.time).getTime();
+        var date = aggregateSpans[cConf.aggregate || "1 hour"](point.time);
+        if (cConf.offset)
+            date = cConf.offset(date);
+        var x = date.getTime();
         var mac = point.host.mac.addr;
         if (!bins[x])
             bins[x] = {};
@@ -153,16 +153,20 @@ function getChart(title, hosts, mapDate, configChanges) {
         data: Object.keys(bins).map(function (time) {
             var bin = bins[time];
             var maxTime = Math.max.apply(Math, Object.keys(bin).map(function (mac) { return bin[mac]; }));
-            return { x: +time, y: 100 * bin[h.mac.addr] / maxTime || 0 };
-        }).sort(function (a, b) { return a.x - b.x; })
+            return [+time, 100 * bin[h.mac.addr] / maxTime || 0];
+        }).sort(function (_a, _b) {
+            var x1 = _a[0], y1 = _a[1];
+            var x2 = _b[0], y2 = _b[1];
+            return x1 - x2;
+        })
     }); });
     return $.extend(true, {
-        chart: { type: 'line', zoomType: 'x' },
-        title: { text: title },
+        chart: { type: 'line', zoomType: 'x', renderTo: target },
+        title: { text: cConf.title },
         xAxis: {
             type: 'datetime',
         },
-        plotOptions: { line: { marker: { enabled: false } } },
+        plotOptions: { line: { marker: { enabled: false }, animation: false } },
         yAxis: {
             title: { text: 'Online' },
             labels: { format: "{value:%.0f}%" },
@@ -170,16 +174,33 @@ function getChart(title, hosts, mapDate, configChanges) {
         },
         // tooltip: {},
         series: series
-    }, configChanges);
+    }, cConf.config);
+}
+function makeSelect(value, callback) {
+    var select = document.createElement("select");
+    Object.keys(aggregateSpans).map(function (name) { return new Option(name); }).forEach(function (o) { return select.add(o); });
+    select.value = value;
+    select.addEventListener("change", function (e) { return callback(select.value); });
+    return $("<p>Aggregate over </p>").append(select);
+}
+function initializeChart(hosts, charts, index) {
+    if (index === void 0) { index = 0; }
+    var chart = charts[index];
+    if (!chart)
+        return;
+    var chartDiv = $("<div>").appendTo(chart.container);
+    var highchart = new Highcharts.Chart(getChartConfiguration(hosts, chart, chartDiv[0]), function () { return setTimeout(function () { return initializeChart(hosts, charts, index + 1); }, 0); });
+    $(chart.container).append(makeSelect(chart.aggregate, function (aggregate) {
+        chart.aggregate = aggregate;
+        chartDiv.highcharts().destroy();
+        new Highcharts.Chart(getChartConfiguration(hosts, chart, chartDiv[0]));
+    }));
+    $(chart.container).children(".spinner").remove();
 }
 function display(hosts) {
-    window.hosts = hosts;
-    $("body>div").append("<h3>Totals</h3>");
-    $("body>div").append(getTable(hosts));
-    for (var _i = 0; _i < charts.length; _i++) {
-        var chart = charts[_i];
-        $(chart.container).highcharts(getChart(chart.title, hosts, chart.mapper, chart.config));
-    }
+    this.hosts = hosts;
+    $(".statistics.chart").append("<h3>Totals</h3>").append(getTable(hosts));
+    initializeChart(hosts, charts);
 }
 function showError(error) {
     $(".container-fluid").prepend("<div class=\"alert alert-danger\">Error: " + JSON.stringify(error) + "</div>");
