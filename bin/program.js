@@ -217,6 +217,14 @@ Highcharts.setOptions({ global: { useUTC: false } });
 $(function () {
     $.getJSON("config.json").then(function (_config) {
         config = _config;
+        for (var _i = 0, _a = Object.keys(config.hostToName); _i < _a.length; _i++) {
+            var host = _a[_i];
+            config.hostToName[host.toUpperCase()] = config.hostToName[host];
+        }
+        for (var _b = 0, _c = Object.keys(config.macToName); _b < _c.length; _b++) {
+            var mac = _c[_b];
+            config.macToName[mac.toUpperCase()] = config.macToName[mac];
+        }
         getAndDecompress(config.input).then(Parser.parseAll).then(function (hosts) { return display(hosts); }).fail(function (s) { return showError("getting " + config.input + ": " + s.statusText); });
     }).fail(function (s) { return showError("getting config.json: " + s.statusText); });
 });

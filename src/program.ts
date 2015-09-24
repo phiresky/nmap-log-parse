@@ -204,6 +204,12 @@ Highcharts.setOptions({ global: { useUTC: false } });
 $(function() {
 	$.getJSON("config.json").then(_config => {
 		config = _config;
+		for(const host of Object.keys(config.hostToName)) {
+			config.hostToName[host.toUpperCase()] = config.hostToName[host];
+		}
+		for(const mac of Object.keys(config.macToName)) {
+			config.macToName[mac.toUpperCase()] = config.macToName[mac];
+		}
 		getAndDecompress(config.input).then(Parser.parseAll).then(hosts => display(hosts)).fail(s => showError(`getting ${config.input}: ${s.statusText}`));
 	}).fail(s => showError(`getting config.json: ${s.statusText}`));
 });
