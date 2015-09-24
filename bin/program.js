@@ -38,11 +38,16 @@ function mapToWeek(date) {
     return date;
 }
 var charts = [
-    { container: '#globalChart', title: "Uptime percentage by date", mapper: mapToGlobal },
-    { container: "#dailyChart", title: "Uptime percentage by day time", mapper: mapToSingleDate },
+    { container: '#globalChart', title: "Uptime percentage by date", mapper: mapToGlobal, config: {} },
+    { container: "#dailyChart", title: "Uptime percentage by day time", mapper: mapToSingleDate, config: {
+            tooltip: { headerFormat: "<span style=\"font-size: 10px\">{point.key:%H:%M:%S}</span><br/>" }
+        } },
     { container: "#weeklyChart", title: "Uptime percentage by week day", mapper: mapToWeek,
-        config: { xAxis: { labels: { formatter: function () { return "" + "Su,Mo,Tu,We,Th,Fr,Sa,Su".split(",")[new Date(this.value).getDay()]; } } } }
-    },
+        config: {
+            tooltip: { headerFormat: "<span style=\"font-size: 10px\">{point.key:%A %H:%M:%S}</span><br/>" },
+            xAxis: { labels: { format: "{value:%a}" }
+            }
+        } }
 ];
 var Parser;
 (function (Parser) {
