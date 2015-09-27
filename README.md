@@ -41,6 +41,7 @@ Screenshot:
     	"input": "../logs",
     	"macToName": {},
     	"hostToName": {},
+    	"hide": [],
     	"logInterval": 10,
     	"ignoreLessThanPercent": 0.02
     }

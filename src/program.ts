@@ -124,7 +124,8 @@ function getChartConfiguration(hosts: Hosts, cConf: ChartConfig, target: Element
 	let allPoints:{host:HostInfo, time:Date}[] = [];
 	let maximumUptime = Math.max(...Object.keys(hosts).map(h => hosts[h].times.length));
 	let filteredHosts = Object.keys(hosts).map(h => hosts[h]).filter(h =>
-		!config.ignoreLessThanPercent || (h.times.length / maximumUptime > config.ignoreLessThanPercent)
+		config.hide.indexOf(h.mac.addr) < 0
+		&& (!config.ignoreLessThanPercent || (h.times.length / maximumUptime > config.ignoreLessThanPercent))
 	);
 	filteredHosts.forEach(h => h.times.map(time => allPoints.push({host:h, time:time})));
 	let lookup:{[mac:string]:number} = {};
@@ -225,15 +226,22 @@ function getAndDecompress(fname: string): JQueryPromise<string> {
 	return $.get(config.input);
 }
 Highcharts.setOptions({ global: { useUTC: false } });
+
+function normalizeConfig(config: Configuration): Configuration {
+	config.hostToName = config.hostToName || {};
+	config.macToName = config.macToName || {};
+	for(const host of Object.keys(config.hostToName)) {
+		config.hostToName[host.toUpperCase()] = config.hostToName[host];
+	}
+	for(const mac of Object.keys(config.macToName)) {
+		config.macToName[mac.toUpperCase()] = config.macToName[mac];
+	}
+	config.hide = (config.hide||[]).map(mac => mac.toUpperCase());
+	return config;
+}
 $(function() {
 	$.getJSON("config.json").then(_config => {
-		config = _config;
-		for(const host of Object.keys(config.hostToName)) {
-			config.hostToName[host.toUpperCase()] = config.hostToName[host];
-		}
-		for(const mac of Object.keys(config.macToName)) {
-			config.macToName[mac.toUpperCase()] = config.macToName[mac];
-		}
+		config = normalizeConfig(_config);
 		getAndDecompress(config.input).then(Parser.parseAll).then(hosts => display(hosts)).fail(s => showError(`getting ${config.input}: ${s.statusText}`));
 	}).fail(s => showError(`getting config.json: ${s.statusText}`));
 });

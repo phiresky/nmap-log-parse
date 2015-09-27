@@ -131,7 +131,8 @@ function getChartConfiguration(hosts, cConf, target) {
     var allPoints = [];
     var maximumUptime = Math.max.apply(Math, Object.keys(hosts).map(function (h) { return hosts[h].times.length; }));
     var filteredHosts = Object.keys(hosts).map(function (h) { return hosts[h]; }).filter(function (h) {
-        return !config.ignoreLessThanPercent || (h.times.length / maximumUptime > config.ignoreLessThanPercent);
+        return config.hide.indexOf(h.mac.addr) < 0
+            && (!config.ignoreLessThanPercent || (h.times.length / maximumUptime > config.ignoreLessThanPercent));
     });
     filteredHosts.forEach(function (h) { return h.times.map(function (time) { return allPoints.push({ host: h, time: time }); }); });
     var lookup = {};
@@ -240,17 +241,23 @@ function getAndDecompress(fname) {
     return $.get(config.input);
 }
 Highcharts.setOptions({ global: { useUTC: false } });
+function normalizeConfig(config) {
+    config.hostToName = config.hostToName || {};
+    config.macToName = config.macToName || {};
+    for (var _i = 0, _a = Object.keys(config.hostToName); _i < _a.length; _i++) {
+        var host = _a[_i];
+        config.hostToName[host.toUpperCase()] = config.hostToName[host];
+    }
+    for (var _b = 0, _c = Object.keys(config.macToName); _b < _c.length; _b++) {
+        var mac = _c[_b];
+        config.macToName[mac.toUpperCase()] = config.macToName[mac];
+    }
+    config.hide = (config.hide || []).map(function (mac) { return mac.toUpperCase(); });
+    return config;
+}
 $(function () {
     $.getJSON("config.json").then(function (_config) {
-        config = _config;
-        for (var _i = 0, _a = Object.keys(config.hostToName); _i < _a.length; _i++) {
-            var host = _a[_i];
-            config.hostToName[host.toUpperCase()] = config.hostToName[host];
-        }
-        for (var _b = 0, _c = Object.keys(config.macToName); _b < _c.length; _b++) {
-            var mac = _c[_b];
-            config.macToName[mac.toUpperCase()] = config.macToName[mac];
-        }
+        config = normalizeConfig(_config);
         getAndDecompress(config.input).then(Parser.parseAll).then(function (hosts) { return display(hosts); }).fail(function (s) { return showError("getting " + config.input + ": " + s.statusText); });
     }).fail(function (s) { return showError("getting config.json: " + s.statusText); });
 });
