@@ -15,7 +15,7 @@ Screenshot:
 	where
     
     - `$subnet` is your local network, e.g. '192.168.178.\*'
-    - `$outputpath` is the path where you want your log stored
+    - `$outputpath/logs` is the location where you want your log stored (logs must not exist yet)
     
     If you don't have a lot of space (the above takes ~10MB / month), you can also compress the logs:
     
