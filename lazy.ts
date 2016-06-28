@@ -1,7 +1,7 @@
 export class Lazy<T> implements Iterable<T> {
     constructor(private iterable: Iterable<T>) { }
-
-    map<U>(mapper: (t: T) => U): Lazy<U> {
+    //map<A,B>(mapper: (t: T) => [A, B]): Lazy<[A, B]>
+    map<U>(mapper: ((t: T) => U)): Lazy<U> {
         const self = this;
         return lazy(function* () {
             for (const element of self) yield mapper(element);
@@ -12,6 +12,7 @@ export class Lazy<T> implements Iterable<T> {
         //TODO: is this possible without waiting for all to complete?
         return lazy(await Promise.all([...this.map(mapper)]));
     }
+
     mapToTuple<A, B>(mapper: (t: T) => [A, B]): Lazy<[A, B]> {
         return this.map(mapper);
     }
@@ -50,6 +51,14 @@ export class Lazy<T> implements Iterable<T> {
         return previous;
     }
 
+    /** forces evaluation */
+    sort(keyGetter: ((t: T) => number|string)) {
+        return lazy([...this].sort((a, b) => {
+            const ak = keyGetter(a), bk = keyGetter(b);
+            return ak < bk ? -1 : ak > bk ? 1 : 0;
+        }));
+    }
+
     sum(this: Lazy<number>) {
         return this.reduce((a, b) => a + b, 0);
     }
@@ -81,6 +90,14 @@ export class Lazy<T> implements Iterable<T> {
 
     collect() {
         return [...this];
+    }
+
+    first() {
+        return this[Symbol.iterator]().next().value;
+    }
+
+    forEach(consumer: (t:T) => void) {
+        for(const element of this) consumer(element);
     }
 
     [Symbol.iterator]() {

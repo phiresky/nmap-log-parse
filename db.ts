@@ -1,5 +1,5 @@
 import Dexie from 'dexie';
-import {Config} from './main';
+import {Config} from './config';
 import {parseXML, parseXMLReturn} from './util';
 
 export interface NmapLog {

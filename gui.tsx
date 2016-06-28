@@ -1,20 +1,25 @@
-import {Config} from './main';
-import {Database} from './db';
-import {NmapLog} from './db';
+import { Config } from './config';
+import { Database } from './db';
+import { NmapLog } from './db';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-import {lazy} from './lazy';
-import {levelInvert, DateRounder, roundDate} from './util';
+import { lazy } from './lazy';
+import { levelInvert, DateRounder, roundDate } from './util';
 import * as Highcharts from 'highcharts';
 
 function aggregate(datas: NmapLog[], rounder: DateRounder): Map<number, Map<string, number>> {
     const map = new Map<number, Map<string, number>>();
-    for (const data of datas) {
-        const rounded = rounder(new Date(data.time)).getTime();
-        if (!map.has(rounded)) map.set(rounded, new Map());
-        const map2 = map.get(rounded) !;
+    lazy(datas)
+    .map(log => ({
+        time: rounder(new Date(log.time)).getTime(),
+        devices: log.devices
+    }))
+    .sort(log => log.time)
+    .forEach(data => {
+        if (!map.has(data.time)) map.set(data.time, new Map());
+        const map2 = map.get(data.time) !;
         for (const dev of data.devices) map2.set(dev, (map2.get(dev) || 0) + 1);
-    }
+    });
     return map;
 }
 
@@ -29,7 +34,8 @@ class ReactChart extends React.Component<{ options: HighchartsOptions }, {}> {
     componentWillUnmount() {
         this.chart.destroy();
     }
-    componentDidUpdate() {
+    componentDidUpdate(oldProps: {options: HighchartsOptions}) {
+        if(oldProps.options === this.props.options) return;
         if (this.chart) this.chart.destroy();
         this.chart = new Highcharts.Chart(this.container, this.props.options);
     }
@@ -46,13 +52,18 @@ class AggregatedChart extends React.Component<AggCP, { options: HighchartsOption
         this.state = { options: { title: { text: "Loading..." } } };
         this.init();
     }
+    componentDidUpdate(oldProps: AggCP, oldState: {options: HighchartsOptions}) {
+        if(oldProps !== this.props) this.init();
+    }
     async init() {
+        console.log("reiniting");
         const agg = levelInvert(aggregate(this.props.data, this.props.rounder), 0);
-        const meUptime = lazy(agg.get(this.props.config.selfMacAddress) !.values()).sum();
+        const meUptime = agg.get(this.props.config.selfMacAddress) !;
+        const totalMeUptime = lazy(meUptime.values()).sum();
         const logIntervalMS = 1000 * 60 * this.props.config.logIntervalMinutes;
         let minDistance = Infinity;
         const data = await lazy(agg)
-            .filter(([mac, vals]) => lazy(vals.values()).sum() >= meUptime * this.props.config.minimumUptime)
+            .filter(([mac, vals]) => lazy(vals.values()).sum() >= totalMeUptime * this.props.config.minimumUptime)
             .mapAsync(async ([mac, map]) => {
                 const info = await this.props.db.getDeviceInfo(mac);
                 return {
@@ -64,15 +75,18 @@ class AggregatedChart extends React.Component<AggCP, { options: HighchartsOption
                             <p><strong>IPs</strong>: <ul>${info.ips.map(i => `<li>${i}</li>`)}</ul></p>
                         `
                     },
-                    data: lazy(map).intersplice((left, right) => {
-                        const distance = (right[0] - left[0]);
-                        if (distance < minDistance) minDistance = distance;
-                        if (distance >= minDistance * 2)
-                            return [[left[0] + logIntervalMS, null], [right[0] - logIntervalMS, null]] as [number, number | null][];
-                        else return [];
-                    }).collect()
+                    data: lazy(map)
+                        .mapToTuple(([time, amount]) => [time, (100 * amount / meUptime.get(time)) | 0])
+                        .intersplice((left, right) => {
+                            const distance = (right[0] - left[0]);
+                            if (distance < minDistance) minDistance = distance;
+                            if (distance >= minDistance * 2)
+                                return [[left[0] + logIntervalMS, null], [right[0] - logIntervalMS, null]] as [number, number | null][];
+                            else return [];
+                        }).collect()
                 }
             });
+        Highcharts.setOptions({ global: { useUTC: false } });
         this.setState({
             options: {
                 chart: { type: 'line', zoomType: 'x' },
@@ -81,11 +95,15 @@ class AggregatedChart extends React.Component<AggCP, { options: HighchartsOption
                     type: 'datetime',
                     //minRange: 14 * 24 * 60 * 60 * 1000
                 },
+                tooltip: {
+                    valueSuffix: '%'
+                },
                 plotOptions: { line: { marker: { enabled: false }, animation: false } },
                 yAxis: {
                     title: { text: 'Online' },
-                    labels: { format: "{value:%.0f}" },
-                    min: 0
+                    labels: { format: "{value:%.0f}%" },
+                    min: 0,
+                    max: 100
                 },
                 // tooltip: {},
                 series: data.collect()
@@ -96,14 +114,56 @@ class AggregatedChart extends React.Component<AggCP, { options: HighchartsOption
         return <ReactChart options={this.state.options} />;
     }
 }
+type Granularities = [string, DateRounder][];
+type GranCP = { config: Config, db: Database, data: NmapLog[], initialGranularity: string,
+    title: string, granularities: Granularities, offsetter?: DateRounder };
+class GranularityChoosingChart extends React.Component<GranCP, { granularity: string }> {
+    constructor(props: GranCP) {
+        super(props);
+        this.state = { granularity: props.initialGranularity };
+    }
+    render() {
+        const rounder = lazy(this.props.granularities).filter(k => k[0] === this.state.granularity).first()[1];
+        let rounder2 = rounder;
+        if(this.props.offsetter) rounder2 = date => this.props.offsetter!(rounder(date));
+        return (
+            <div>Granularity: <select
+                value={this.state.granularity}
+                onChange={e => this.setState({granularity: (e.target as HTMLSelectElement).value})}
+            >{this.props.granularities.map(
+                ([name, rounder]) => <option key={name} value={name}>{name}</option>
+            ) }</select>
+                <AggregatedChart rounder={rounder2} {...this.props} />
+            </div>
+        )
+    }
+}
+function offsetToSingleDay(d: Date) {
+    d.setFullYear(1970); d.setMonth(0, 1);
+    return d;
+}
+function offsetToSingleWeek(d: Date) {
+    d.setFullYear(1970);
+    d.setMonth(0, d.getDay() + 5);
+    return d;
+}
 export class Gui extends React.Component<{ data: NmapLog[], config: Config, db: Database }, {}> {
+    granularities: Granularities = [
+        ["Weekly", date => roundDate(date, 7, 24)],
+        ["Daily", date => roundDate(date, 1, 24)],
+        ["3 hourly", date => roundDate(date, 1, 3)],
+        ["hourly", date => roundDate(date, 1, 1)],
+        ["20 minutes", date => roundDate(date, 1, 1, 20)]
+    ]
     render() {
         return (
             <div>
-                <AggregatedChart rounder={date => roundDate(date, 7, 24) } title="weekly" {...this.props} />
-                <AggregatedChart rounder={date => roundDate(date, 1, 24) } title="daily" {...this.props} />
-                <AggregatedChart rounder={date => roundDate(date, 1, 3) } title="3 hourly" {...this.props} />
-                <AggregatedChart rounder={date => roundDate(date, 1, 1) } title="hourly" {...this.props} />
+                <GranularityChoosingChart granularities={this.granularities} initialGranularity="Weekly" 
+                    title="All Time" {...this.props} />
+                <GranularityChoosingChart granularities={this.granularities.slice(1)} initialGranularity="3 hourly"
+                    title="Weekly" offsetter={offsetToSingleWeek} {...this.props} />
+                <GranularityChoosingChart granularities={this.granularities.slice(2)} initialGranularity="20 minutes"
+                    title="Daily" offsetter={offsetToSingleDay} {...this.props} />
             </div>
         );
     }

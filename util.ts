@@ -1,16 +1,15 @@
 import {lazy} from './lazy';
 import {NmapLog, MacToInfo} from './db';
-import {Config} from './main';
+import {Config} from './config';
 
-export function levelInvert<A, B, C, D>(map: Map<A, Map<B, C>>, defaultValue: D) {
+export function levelInvert<A, B, C, D>(map: Map<A, Map<B, C>>, defaultValue: D): Map<B, Map<A, C|D>> {
     const bs = lazy(map.values()).flatMap(innerMap => innerMap.keys()).unique().collect();
-    const a2s = [...map.keys()];
-    const innerMap = (b: B) => lazy(a2s).toMapKeyed(a => a, a => map.get(a) !.get(b) || defaultValue);
+    const as = [...map.keys()];
+    const innerMap = (b: B) => lazy(as).toMapKeyed(a => a, a => map.get(a) !.get(b) || defaultValue);
     return new Map<B, Map<A, C | D>>(lazy(bs).toMapKeyed(b => b, innerMap));
 }
 
 export function roundDate(date: Date, weekday: number, hours: number, minutes: number = 60) {
-    date = new Date(date.getTime());
     date.setDate(date.getDate() - date.getDay() % weekday);
     date.setHours(date.getHours() - date.getHours() % hours);
     date.setMinutes(date.getMinutes() - date.getMinutes() % minutes, 0, 0);

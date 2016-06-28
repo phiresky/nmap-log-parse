@@ -12,7 +12,7 @@
         "noFallthroughCasesInSwitch": true,
         "outDir": "bin"
     },
-    "exclude": [
-        "node_modules"
+    "files": [
+        "main.tsx"
     ]
 }
