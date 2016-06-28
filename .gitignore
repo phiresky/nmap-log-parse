@@ -1,5 +1,4 @@
-/config.json
-/allfiles
-/.settings
-/nmap-log
-/logs
+config.json
+bin
+logs
+node_modules

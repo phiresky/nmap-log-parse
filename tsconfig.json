@@ -1,16 +1,18 @@
 {
-	"compilerOptions": {
-		"target": "ES5",
-		"outDir": "bin",
-		"out": "bin/program.js",
-		"sourceMap": true,
-		"noImplicitAny": true,
-		"module": "commonjs"
-	},
-	"files": [
-		"lib/typings/highcharts/highcharts.d.ts",
-		"lib/typings/jquery/jquery.d.ts",
-		"src/Configuration.ts",
-		"src/program.ts"
-	]
+    "compilerOptions": {
+        "module": "commonjs",
+        "moduleResolution": "node",
+        "target": "es2015",
+        "noImplicitAny": true,
+        "sourceMap": true,
+        "jsx": "react",
+        "strictNullChecks": true,
+        "noImplicitThis": true,
+        "noImplicitReturns": true,
+        "noFallthroughCasesInSwitch": true,
+        "outDir": "bin"
+    },
+    "exclude": [
+        "node_modules"
+    ]
 }
