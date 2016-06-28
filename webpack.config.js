@@ -1,4 +1,6 @@
-module.exports = {	
+var webpack = require("webpack");
+
+module.exports = {
 	entry: './main.tsx',
 	output: {
 		filename: 'bin/bundle.js'
@@ -6,6 +8,8 @@ module.exports = {
 	resolve: {
 		extensions: ['', '.webpack.js', '.web.js', '.ts', '.tsx', '.js']
 	},
+	plugins: [
+	],
     devtool: 'source-map',
 	module: {
 		loaders: [
