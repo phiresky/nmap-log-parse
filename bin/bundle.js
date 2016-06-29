@@ -101,7 +101,7 @@
 	}
 	function run() {
 	    return __awaiter(this, void 0, void 0, function* () {
-	        var userConfig = yield fetch("config.json").then(resp => {
+	        var userConfig = yield fetch("config.json", { credentials: 'include' }).then(resp => {
 	            if (!resp.ok) {
 	                console.warn(resp);
 	                throw Error(resp.status + " " + resp.statusText);
@@ -20932,7 +20932,7 @@
 	        return __awaiter(this, void 0, void 0, function* () {
 	            var gotDate = yield this.gottenFiles.get(filename).catch(e => null);
 	            if (!forceFetch && gotDate) return gotDate.result;
-	            var response = yield fetch(filename);
+	            var response = yield fetch(filename, { credentials: 'include' });
 	            if (response.status == 404) {
 	                yield this.gottenFiles.put({ filename, result: "404" });
 	                return "404";
