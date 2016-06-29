@@ -173,7 +173,7 @@ export const GuiContainer = ({children = {}}) =>
         <div className="page-header"><h1>Who's in my network?</h1> <a href="https://github.com/phiresky/nmap-log-parse">Source Code on GitHub</a></div>
         {children}
         <footer>
-            <button className="btn btn-danger btn-sm" onClick={e => {e.preventDefault(); indexedDB.deleteDatabase("NmapLogDatabase");}}>Remove local database</a>
+            <button className="btn btn-danger btn-sm" onClick={e => {e.preventDefault(); indexedDB.deleteDatabase("NmapLogDatabase");}}>Remove local database</button>
         </footer>
     </div>;
 export class Gui extends React.Component<CommonChartData, {}> {
