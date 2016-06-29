@@ -1,7 +1,7 @@
 import Dexie from 'dexie';
 import {Config} from './config';
 import {parseXML, parseXMLReturn} from './util';
-
+(window as any).Promise = Dexie.Promise;
 export interface NmapLog {
     time: number,
     devices: Set<string> // mac addresses
@@ -15,7 +15,12 @@ export interface MacToInfo {
     type: "ip"|"hostname"|"vendor",
     info: string
 }
-
+export interface DeviceInfo {
+    displayname: string|undefined,
+    vendor: string[],
+    hostnames: string[],
+    ips: string[]
+}
 export class Database extends Dexie {
     nmapLogs: Dexie.Table<NmapLog, number>;
     gottenDates: Dexie.Table<GottenDates, number>;
@@ -28,15 +33,14 @@ export class Database extends Dexie {
             macToInfo: '[mac+type+info], mac, info',
         })
     }
-    async getDeviceInfo(mac: string) {
+    async getDeviceInfo(mac: string): Promise<DeviceInfo> {
         const infos = await this.macToInfo.where("mac").equals(mac).toArray();
-        const info = {
+        return {
             displayname: this.config.deviceNames[mac],
             vendor: infos.filter(info => info.type === 'vendor').map(info => info.info).filter(x => x.length > 0),
             hostnames: infos.filter(info => info.type === 'hostname').map(info => info.info),
             ips: infos.filter(info => info.type === 'ip').map(info => info.info)
         };
-        return info;
     }
     /**
      * @return the data for the given date, null if no data was recorded on that day 
@@ -44,7 +48,7 @@ export class Database extends Dexie {
     async getForDate(date: Date): Promise<"404" | "success"> {
         date.setUTCHours(0, 0, 0, 0);
         const dateFormatted = date.toISOString().substr(0, 10);
-        const gotDate = await (this.gottenDates.get(date.getTime()) as any as Promise<GottenDates>).catch(e => null);
+        const gotDate = await this.gottenDates.get(date.getTime()).catch(e => null)
 
         if (gotDate) return gotDate.result;
         const filename = this.config.logFilesPath + dateFormatted + ".xml";

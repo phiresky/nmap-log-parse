@@ -1,8 +1,8 @@
-import {lazy} from './lazy';
-import {NmapLog, MacToInfo} from './db';
-import {Config} from './config';
+import { lazy } from './lazy';
+import { NmapLog, MacToInfo } from './db';
+import { Config } from './config';
 
-export function levelInvert<A, B, C, D>(map: Map<A, Map<B, C>>, defaultValue: D): Map<B, Map<A, C|D>> {
+export function levelInvert<A, B, C, D>(map: Map<A, Map<B, C>>, defaultValue: D): Map<B, Map<A, C | D>> {
     const bs = lazy(map.values()).flatMap(innerMap => innerMap.keys()).unique().collect();
     const as = [...map.keys()];
     const innerMap = (b: B) => lazy(as).toMapKeyed(a => a, a => map.get(a) !.get(b) || defaultValue);
@@ -78,3 +78,41 @@ export function parseXML(config: Config, filename: string, xml: string): parseXM
     }
     return scan;
 }
+
+export function assignDeep(target: any, ...others: any[]) {
+
+    for (const options of others) {
+        // Only deal with non-null/undefined values
+        if (options != null) {
+
+            // Extend the base object
+            for (const name in options) {
+                const src = target[name];
+                const copy = options[name];
+
+                // Prevent never-ending loop
+                if (target === copy) continue;
+
+                // Recurse if we're merging plain objects or arrays
+                if (copy && typeof copy === "object") {
+                    let clone: any;
+                    if (Array.isArray(copy)) {
+                        clone = src && Array.isArray(src) ? src : [];
+                    } else {
+                        clone = src && typeof src === "object" ? src : {};
+                    }
+
+                    // Never move original objects, clone them
+                    target[name] = assignDeep(clone, copy);
+
+                } else if (copy !== undefined) {
+                    // Don't bring in undefined values
+                    target[name] = copy;
+                }
+            }
+        }
+    }
+
+    // Return the modified object
+    return target;
+};

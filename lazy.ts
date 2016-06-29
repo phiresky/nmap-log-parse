@@ -1,4 +1,4 @@
-export class Lazy<T> implements Iterable<T> {
+class Lazy<T> implements Iterable<T> {
     constructor(private iterable: Iterable<T>) { }
     //map<A,B>(mapper: (t: T) => [A, B]): Lazy<[A, B]>
     map<U>(mapper: ((t: T) => U)): Lazy<U> {
@@ -52,7 +52,7 @@ export class Lazy<T> implements Iterable<T> {
     }
 
     /** forces evaluation */
-    sort(keyGetter: ((t: T) => number|string)) {
+    sort(keyGetter: ((t: T) => number | string)) {
         return lazy([...this].sort((a, b) => {
             const ak = keyGetter(a), bk = keyGetter(b);
             return ak < bk ? -1 : ak > bk ? 1 : 0;
@@ -64,7 +64,7 @@ export class Lazy<T> implements Iterable<T> {
     }
 
     /**
-     * @example  lazy([1,1,1]).intersplice((left, right) => [left - right]).collect() // [1,0,1,0,1]
+     * @example lazy([1,1,1]).intersplice((left, right) => [left - right]).collect() // [1,0,1,0,1]
      * @example lazy("testing").intersplice(() => [":"]) // "t:e:s:t:i:n:g"
      */
     intersplice<U>(between: (left: T, right: T) => Iterable<U>): Lazy<T | U> {
@@ -76,6 +76,20 @@ export class Lazy<T> implements Iterable<T> {
                 if (last !== nothing) yield* between(last, element);
                 last = element;
                 yield element;
+            }
+        } ());
+    }
+
+    zipWith<U, V>(other: Iterable<U>, combinator: (t: T, u: U) => V) {
+        const self = this;
+        return lazy(function* (): Iterable<V> {
+            const selfIt = self[Symbol.iterator]();
+            const otherIt = other[Symbol.iterator]();
+            while (true) {
+                const selfNext = selfIt.next();
+                const otherNext = otherIt.next();
+                if (selfNext.done || otherNext.done) return;
+                yield combinator(selfNext.value, otherNext.value);
             }
         } ());
     }
@@ -96,8 +110,12 @@ export class Lazy<T> implements Iterable<T> {
         return this[Symbol.iterator]().next().value;
     }
 
-    forEach(consumer: (t:T) => void) {
-        for(const element of this) consumer(element);
+    forEach(consumer: (t: T) => void) {
+        for (const element of this) consumer(element);
+    }
+
+    concat(other: Iterable<T>) {
+        return lazy.concat(this, other);
     }
 
     [Symbol.iterator]() {
@@ -107,4 +125,12 @@ export class Lazy<T> implements Iterable<T> {
 
 export function lazy<T>(iterable: Iterable<T>) {
     return new Lazy(iterable);
+}
+
+export namespace lazy {
+    export function concat<T>(...iterables: Iterable<T>[]) {
+        return lazy(function* () {
+            for (const it in iterables) yield* it;
+        } ());
+    }
 }

@@ -1,7 +1,7 @@
 var webpack = require("webpack");
 
 module.exports = {
-	entry: './main.tsx',
+	entry: ['./main.tsx'],
 	output: {
 		filename: 'bin/bundle.js'
 	},
@@ -13,7 +13,7 @@ module.exports = {
     devtool: 'source-map',
 	module: {
 		loaders: [
-			{ test: /\.tsx?$/, loader: 'ts-loader' }
+			{ test: /\.tsx?$/, loader: 'babel-loader?plugins[]=transform-es2015-block-scoping!ts-loader' }
 		]
 	}
 }
