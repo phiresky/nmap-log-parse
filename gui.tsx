@@ -158,7 +158,7 @@ const HostInfoLine = (info: DeviceInfo & { mac: string, upTime: number, upRelati
     <tr>
         {[
             info.displayname,
-            `${info.mac} ${info.vendor ? `(${info.vendor})` : ""}`,
+            `${info.mac} ${info.vendor.length > 0 ? `(${info.vendor})` : ""}`,
             <Ul list={info.hostnames} />,
             <Ul list={info.ips} />,
             info.upTime.toFixed(0) + "h",
@@ -172,10 +172,25 @@ export const GuiContainer = ({children = {}}) =>
     <div className="container">
         <div className="page-header"><h1>Who's in my network?</h1> <a href="https://github.com/phiresky/nmap-log-parse">Source Code on GitHub</a></div>
         {children}
+        <hr/>
         <footer>
-            <button className="btn btn-danger btn-sm" onClick={e => {e.preventDefault(); indexedDB.deleteDatabase("NmapLogDatabase");}}>Remove local database</button>
+            <button className="btn btn-danger btn-sm" onClick={e => {e.preventDefault(); indexedDB.deleteDatabase("NmapLogDatabase");}}>Clear local database</button>
         </footer>
     </div>;
+export const ProgressGui = (props: {progress: number, total?: number, prefix: string, suffix: string}) =>
+    <GuiContainer>
+        <div className="progress">
+            <div className="progress-bar progress-bar-info progress-bar-striped active"
+                    style={{
+                        transition: "none",
+                        width: (
+                            (props.total ? (props.progress / props.total) : (1 / (-1 / 50 * props.progress - 1) + 1))
+                            * 100).toFixed(1) + "%"
+                }}>
+                {props.prefix}{props.progress}{props.suffix}
+            </div>
+        </div>
+    </GuiContainer>;
 export class Gui extends React.Component<CommonChartData, {}> {
     granularities: Granularities = [
         ["Weekly", date => roundDate(date, 7, 24)],

@@ -1,3 +1,12 @@
+/**
+ * Library for functional operations on lazily evaluated EcmaScript iterators / generators
+ * 
+ * For example,
+ *     lazy([1,2,3,4,5]).map(x => x * x).filter(x => x > 5).forEach(x => console.log(x))
+ * creates the same output as 
+ *     [1,2,3,4,5].map(x => x * x).filter(x => x > 5).forEach(x => console.log(x))
+ * but without creating any intermediary arrays.
+ */
 class Lazy<T> implements Iterable<T> {
     constructor(private iterable: Iterable<T>) { }
     //map<A,B>(mapper: (t: T) => [A, B]): Lazy<[A, B]>
@@ -8,9 +17,13 @@ class Lazy<T> implements Iterable<T> {
         } ());
     }
 
-    async mapAsync<U>(mapper: (t: T) => Promise<U>): Promise<Lazy<U>> {
-        //TODO: is this possible without waiting for all to complete?
-        return lazy(await Promise.all([...this.map(mapper)]));
+    async awaitParallel<U>(this: Lazy<Promise<U>>): Promise<Lazy<U>> {
+        return lazy(await Promise.all([...this]));
+    }
+    async awaitSequential<U>(this: Lazy<Promise<U>>): Promise<Lazy<U>> {
+        const results: U[] = [];
+        for(const promise of this) results.push(await promise);
+        return lazy(results);
     }
 
     mapToTuple<A, B>(mapper: (t: T) => [A, B]): Lazy<[A, B]> {
@@ -59,6 +72,22 @@ class Lazy<T> implements Iterable<T> {
         }));
     }
 
+    chunk(limit: number): Lazy<Lazy<T>> {
+        const self = this;
+        return lazy(function* (): Iterable<Lazy<T>> {
+            // must be cached in an array, otherwise it's impossible to know if the outer lazy is finished yet when the inner lazy has not been consumed
+            let cache = [] as T[];
+            for(const element of self) {
+                cache.push(element);
+                if(cache.length === limit) {
+                    yield lazy(cache);
+                    cache = [];
+                }
+            }
+            if(cache.length > 0) yield lazy(cache);
+        }());
+    }
+
     sum(this: Lazy<number>) {
         return this.reduce((a, b) => a + b, 0);
     }
@@ -98,7 +127,7 @@ class Lazy<T> implements Iterable<T> {
         return lazy(new Set(this));
     }
 
-    join(this: Lazy<string>) {
+    join(this: Lazy<number | string | boolean>) {
         return [...this].join("");
     }
 
@@ -118,8 +147,24 @@ class Lazy<T> implements Iterable<T> {
         return lazy.concat(this, other);
     }
 
+    prefetch(count: number) {
+        const self = this;
+        return lazy(function* () {
+            const arr: T[] = [];
+            for(const element of self) {
+                arr.push(element);
+                if(arr.length >= count) yield arr.shift()!;
+            }
+            yield* arr;
+        }());
+    }
+
     [Symbol.iterator]() {
-        return this.iterable[Symbol.iterator]();
+        const it = this.iterable[Symbol.iterator]();
+        this[Symbol.iterator] = () => {
+            throw Error("this lazy was already consumed");
+        }
+        return it;
     }
 }
 
@@ -133,4 +178,19 @@ export namespace lazy {
             for (const it in iterables) yield* it;
         } ());
     }
+}
+
+(window as any).lazy = lazy;
+
+
+function test() {
+    var i = 0;
+    function loggingPromise(me: number) {
+        console.log("created:"+me);
+        return new Promise(res => {
+            console.log("funi:"+me);
+            setTimeout(res, 500);
+        });
+    }
+    lazy(Array.from(Array(10)).map((x,i) => i)).map(i => loggingPromise(i)).chunk(5).flatMap(x => x).awaitSequential();
 }

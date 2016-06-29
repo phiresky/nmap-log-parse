@@ -2,9 +2,9 @@ import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import 'whatwg-fetch';
 //import 'regenerator-runtime';
-import { NmapLog, Database, MacToInfo, GottenDates, DeviceInfo } from './db';
+import { NmapLog, Database, MacToInfo, GottenFiles, DeviceInfo } from './db';
 import { lazy } from './lazy';
-import { Gui, GuiContainer } from './gui';
+import { Gui, GuiContainer, ProgressGui } from './gui';
 (window as any).Promise = Database.Promise;
 import { defaultConfig, Config } from './config';
 const target = document.getElementById("root") !;
@@ -31,15 +31,17 @@ async function run() {
     });
     const config = Object.assign({}, defaultConfig, userConfig);
     config.deviceNames = Object.assign({}, defaultConfig.deviceNames, userConfig.deviceNames);
+   
     const db = new Database(config);
-    await db.getAll(days =>
-        ReactDOM.render(<GuiContainer>
-            <div className="progress">
-                <div className="progress-bar progress-bar-info progress-bar-striped active" style={{ width: ((1 / (-1 / 50 * days - 1) + 1) * 100).toFixed(1) + "%" }}>
-                    Loading: {days} days
-                </div>
-            </div>
-        </GuiContainer>, target));
+    console.time("getDates");
+    await db.getAllDates(days =>
+        ReactDOM.render(<ProgressGui progress={days} prefix="Loading: " suffix=" days" />, target));
+    console.timeEnd("getDates");
+    console.time("getStatic");
+    for(const filename of config.staticLogFiles)
+        await db.getForFile(filename, (action, done, total) =>
+            ReactDOM.render(<ProgressGui progress={done} total={total} prefix={action+" "} suffix=" logs" />, target));
+    console.timeEnd("getStatic");
     const data = await db.nmapLogs.toArray();
     const deviceInfos = await fetchDeviceInfos(db, data);
     ReactDOM.render(<Gui data={data} config={config} deviceInfos={deviceInfos} />, target);

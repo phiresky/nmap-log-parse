@@ -1,13 +1,15 @@
 import Dexie from 'dexie';
 import {Config} from './config';
 import {parseXML, parseXMLReturn} from './util';
+import {lazy} from './lazy';
+
 (window as any).Promise = Dexie.Promise;
 export interface NmapLog {
     time: number,
     devices: Set<string> // mac addresses
 }
-export interface GottenDates {
-    date: number,
+export interface GottenFiles {
+    filename: string,
     result: "404" | "success"
 }
 export interface MacToInfo {
@@ -23,13 +25,13 @@ export interface DeviceInfo {
 }
 export class Database extends Dexie {
     nmapLogs: Dexie.Table<NmapLog, number>;
-    gottenDates: Dexie.Table<GottenDates, number>;
+    gottenFiles: Dexie.Table<GottenFiles, string>;
     macToInfo: Dexie.Table<MacToInfo, string>;
     constructor(private config: Config) {
         super("NmapLogDatabase");
-        this.version(3).stores({
+        this.version(1).stores({
             nmapLogs: 'time',
-            gottenDates: 'date',
+            gottenFiles: 'filename',
             macToInfo: '[mac+type+info], mac, info',
         })
     }
@@ -47,46 +49,54 @@ export class Database extends Dexie {
      */
     async getForDate(date: Date): Promise<"404" | "success"> {
         date.setUTCHours(0, 0, 0, 0);
-        const twoDaysAgo = new Date();
-        twoDaysAgo.setDate(twoDaysAgo.getDate() - 3);
+        const recentDate = new Date();
+        recentDate.setDate(recentDate.getDate() - 3);
         const dateFormatted = date.toISOString().substr(0, 10);
-        const gotDate = await this.gottenDates.get(date.getTime()).catch(e => null)
-
-        if (date < twoDaysAgo && gotDate) return gotDate.result;
+        
         const filename = this.config.logFilesPath + dateFormatted + ".xml";
+        return await this.getForFile(filename, undefined, date >= recentDate);
+    }
+    async getForFile(filename: string, statusCallback?: (state: string, done:number, total:number) => void, forceFetch = false): Promise<"404" | "success"> {
+        const gotDate = await this.gottenFiles.get(filename).catch(e => null);
+        if (!forceFetch && gotDate) return gotDate.result;
+
         const response = await fetch(filename);
         if (response.status == 404) {
-            await this.gottenDates.put({
-                date: date.getTime(), result: "404"
-            });
+            await this.gottenFiles.put({filename, result: "404"});
             return "404";
         }
         if (response.status >= 300) {
             throw Error(`Request Error: ${response.status}: ${response.statusText}`)
         }
 
-        const rawXMLs = await response.text();
-       
-        const scans: parseXMLReturn[] = [];
-        for (const rawXML of rawXMLs.split("<?xml version")) {
-            if (rawXML.length == 0) continue;
-            const scan = parseXML(this.config, filename, "<?xml version" + rawXML);
-            if (scan) scans.push(scan);
-        }
-        //const data = count(scans);
-        await this.transaction('rw', [this.gottenDates, this.nmapLogs, this.macToInfo], async () => {
-
-            this.gottenDates.put({
-                date: date.getTime(), result: "success"
-            });
-            for (const scan of scans) {
-                this.nmapLogs.put(scan.online);
-                this.macToInfo.bulkPut(scan.newInfos);
-            }
-        });
+        const rawXMLs = (await response.text()).split("<?xml version");
+        const total = rawXMLs.length;
+        console.log(`loading ${total} files`);
+        let i = 0;
+        const createStatusCallback = () => statusCallback?
+            [new Promise<void>(resolve => {
+                statusCallback!("loading", i, total);
+                setTimeout(resolve, 0);})
+            ]:[];
+        await lazy(rawXMLs).chunk(200).map(async rawXMLs =>
+            await this.transaction('rw', [this.gottenFiles, this.nmapLogs, this.macToInfo], async () => {
+                for(const rawXML of rawXMLs) {
+                    if (rawXML.length == 0) continue;
+                    const scan = parseXML(this.config, filename, "<?xml version" + rawXML);
+                    if (scan) {
+                        this.nmapLogs.put(scan.online);
+                        this.macToInfo.bulkPut(scan.newInfos);
+                    }
+                    i++;
+                }
+            })
+        ).intersplice(createStatusCallback)
+        .awaitSequential();
+        
+        await this.gottenFiles.put({filename, result: "success"});
         return "success";
     }
-    async getAll(progressCallback: (days: number) => void) {
+    async getAllDates(progressCallback: (days: number) => void) {
         const current = new Date();
         let failures = 0;
         let gotten = 0;

@@ -35,7 +35,7 @@ export function parseXML(config: Config, filename: string, xml: string): parseXM
     };
     for (const h of Array.from(doc.children)) {
         if (h.nodeName === 'parsererror') {
-            console.warn(`parsing error in ${filename}`, doc);
+            console.warn(`parsing error in ${filename}`);
             return null;
         }
         if (h.nodeName !== 'host') {
