@@ -47,17 +47,19 @@ export class Database extends Dexie {
      */
     async getForDate(date: Date): Promise<"404" | "success"> {
         date.setUTCHours(0, 0, 0, 0);
+        const twoDaysAgo = new Date();
+        twoDaysAgo.setDate(twoDaysAgo.getDate() - 3);
         const dateFormatted = date.toISOString().substr(0, 10);
         const gotDate = await this.gottenDates.get(date.getTime()).catch(e => null)
 
-        if (gotDate) return gotDate.result;
+        if (date < twoDaysAgo && gotDate) return gotDate.result;
         const filename = this.config.logFilesPath + dateFormatted + ".xml";
         const response = await fetch(filename);
         if (response.status == 404) {
-            await this.gottenDates.add({
+            await this.gottenDates.put({
                 date: date.getTime(), result: "404"
             });
-            return this.getForDate(date);
+            return "404";
         }
         if (response.status >= 300) {
             throw Error(`Request Error: ${response.status}: ${response.statusText}`)
@@ -74,7 +76,7 @@ export class Database extends Dexie {
         //const data = count(scans);
         await this.transaction('rw', [this.gottenDates, this.nmapLogs, this.macToInfo], async () => {
 
-            this.gottenDates.add({
+            this.gottenDates.put({
                 date: date.getTime(), result: "success"
             });
             for (const scan of scans) {
@@ -82,7 +84,7 @@ export class Database extends Dexie {
                 this.macToInfo.bulkPut(scan.newInfos);
             }
         });
-        return this.getForDate(date);
+        return "success";
     }
     async getAll(progressCallback: (days: number) => void) {
         const current = new Date();

@@ -35,7 +35,7 @@ async function run() {
     await db.getAll(days =>
         ReactDOM.render(<GuiContainer>
             <div className="progress">
-                <div className="progress-bar" style={{ width: ((1 / (-1 / 50 * days - 1) + 1) * 100).toFixed(1) + "%" }}>
+                <div className="progress-bar progress-bar-info progress-bar-striped active" style={{ width: ((1 / (-1 / 50 * days - 1) + 1) * 100).toFixed(1) + "%" }}>
                     Loading: {days} days
                 </div>
             </div>
