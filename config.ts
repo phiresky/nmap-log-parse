@@ -1,5 +1,5 @@
 export const defaultConfig = {
-    logFilesPath: "./logs/logs",
+    logFilesPath: "./logs/",
     maxMissingDays: 7,
     dayGetLimit: Infinity,
     logIntervalMinutes: 10,
