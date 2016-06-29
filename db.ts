@@ -60,7 +60,7 @@ export class Database extends Dexie {
         const gotDate = await this.gottenFiles.get(filename).catch(e => null);
         if (!forceFetch && gotDate) return gotDate.result;
 
-        const response = await fetch(filename);
+        const response = await fetch(filename, {credentials: 'include'});
         if (response.status == 404) {
             await this.gottenFiles.put({filename, result: "404"});
             return "404";

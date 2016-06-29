@@ -22,7 +22,7 @@ async function fetchDeviceInfos(db: Database, data: NmapLog[]) {
     return stats;
 }
 async function run() {
-    const userConfig: Config = await fetch("config.json").then(resp => {
+    const userConfig: Config = await fetch("config.json", {credentials: 'include'}).then(resp => {
         if (!resp.ok) {
             console.warn(resp);
             throw Error(resp.status + " " + resp.statusText);
