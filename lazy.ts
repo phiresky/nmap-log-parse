@@ -160,6 +160,16 @@ class Lazy<T> implements Iterable<T> {
         return this[Symbol.iterator]().next().value;
     }
 
+    some(predicate: (t: T) => boolean) {
+        for(const t of this) if(predicate(t)) return true;
+        return false;
+    }
+
+    every(predicate: (t: T) => boolean) {
+        for(const t of this) if(!predicate(t)) return false;
+        return true;
+    }
+
     forEach(consumer: (t: T) => void) {
         for (const element of this) consumer(element);
     }
@@ -212,6 +222,12 @@ class Lazy<T> implements Iterable<T> {
 
     sum(this: Lazy<number>) {
         return this.reduce((a, b) => a + b, 0);
+    }
+
+    count() {
+        let i = 0;
+        for(const t of this) i++;
+        return i;
     }
 
     /**
