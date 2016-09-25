@@ -16,7 +16,7 @@ export function roundDate(date: Date, weekday: number, hours: number, minutes: n
     return date;
 }
 
-export type DateRounder = (d: Date) => Date;
+export type DateRounder = (d: Date) => Date | null;
 function assumeNonNull<T>(t: T | null | undefined, varname = "var"): T {
     if (t == null || t === undefined) throw Error(varname + " can't be " + t);
     return t;

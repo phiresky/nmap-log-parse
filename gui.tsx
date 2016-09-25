@@ -9,10 +9,13 @@ import * as Highcharts from 'highcharts';
 function aggregate(datas: NmapLog[], rounder: DateRounder): Map<number, Map<string, number>> {
     const map = new Map<number, Map<string, number>>();
     lazy(datas)
-        .map(log => ({
-            time: rounder(new Date(log.time)).getTime(),
-            devices: log.devices
-        }))
+        .flatMap(log => {
+            const rounded = rounder(new Date(log.time));
+            return rounded ? [{
+                time: rounded.getTime(),
+                devices: log.devices
+            }]: [];
+        })
         .sort(log => log.time)
         .forEach(data => {
             if (!map.has(data.time)) map.set(data.time, new Map());
@@ -55,7 +58,7 @@ type GranularityChoosingChartData = SingleChartData & { initialGranularity: stri
 class AggregatedChart extends React.Component<AggregatedChartData, { options: HighchartsOptions }> {
     constructor(props: AggregatedChartData) {
         super(props);
-        this.state = { options: { title: { text: "Loading..." } } };
+        this.state = { options: { title: { text: props.title + ": Loading..." } } };
         this.init();
     }
     componentDidUpdate(oldProps: AggregatedChartData, oldState: { options: HighchartsOptions }) {
@@ -63,7 +66,13 @@ class AggregatedChart extends React.Component<AggregatedChartData, { options: Hi
     }
     async init() {
         const agg = levelInvert(aggregate(this.props.data, this.props.rounder), 0);
-        const meUptime = agg.get(this.props.config.selfMacAddress) !;
+        const meUptime = agg.get(this.props.config.selfMacAddress);
+        if(!meUptime) {
+            // wait for component mount
+            await new Promise(res => setTimeout(res, 0));
+            this.setState({ options: { title: { text: this.props.title + ": No Data." } } });
+            return;
+        }
         agg.delete(this.props.config.selfMacAddress);
         const totalMeUptime = lazy(meUptime.values()).sum();
         const logIntervalMS = 1000 * 60 * this.props.config.logIntervalMinutes;
@@ -129,7 +138,11 @@ class GranularityChoosingChart extends React.Component<GranularityChoosingChartD
     render() {
         const rounder = lazy(this.props.granularities).filter(k => k[0] === this.state.granularity).first()[1];
         let rounder2 = rounder;
-        if (this.props.offsetter) rounder2 = date => this.props.offsetter!(rounder(date));
+        if (this.props.offsetter) rounder2 = date => {
+            const rounded = rounder(date);
+            if(!rounded) return null;
+            else return this.props.offsetter!(rounded);
+        }
         return (
             <div>
                 <AggregatedChart rounder={rounder2} {...this.props} />
@@ -203,6 +216,11 @@ export class Gui extends React.Component<CommonChartData, {}> {
         const meUptime = this.props.deviceInfos.get(this.props.config.selfMacAddress) !.upCount;
         return (
             <GuiContainer>
+                <GranularityChoosingChart
+                    granularities={this.granularities}
+                    initialGranularity="hourly"
+                    title="Last Week"
+                    highchartsOptions={{}} {...this.props} offsetter={date => (Date.now() - date.getTime()) < 1000*60*60*24*7?date:null} />
                 <GranularityChoosingChart
                     granularities={this.granularities.slice(0, 4) }
                     initialGranularity="Weekly"

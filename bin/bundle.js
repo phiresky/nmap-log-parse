@@ -26040,6 +26040,16 @@
 	    }
 	    lazy.generate = generate;
 	})(lazy = exports.lazy || (exports.lazy = {}));
+	window.lazy = lazy;
+	function test() {
+	    function loggingPromise(me) {
+	        return new Promise(res => {
+	            console.log("evaluating:" + me);
+	            setTimeout(res, 500);
+	        });
+	    }
+	    lazy.range(0, 10).map(i => loggingPromise(i)).chunk(5).flatMap(x => x).awaitSequential();
+	}
 
 /***/ },
 /* 175 */
@@ -26086,10 +26096,13 @@
 	var Highcharts = __webpack_require__(176);
 	function aggregate(datas, rounder) {
 	    var map = new Map();
-	    lazy_1.lazy(datas).map(log => ({
-	        time: rounder(new Date(log.time)).getTime(),
-	        devices: log.devices
-	    })).sort(log => log.time).forEach(data => {
+	    lazy_1.lazy(datas).flatMap(log => {
+	        var rounded = rounder(new Date(log.time));
+	        return rounded ? [{
+	            time: rounded.getTime(),
+	            devices: log.devices
+	        }] : [];
+	    }).sort(log => log.time).forEach(data => {
 	        if (!map.has(data.time)) map.set(data.time, new Map());
 	        var map2 = map.get(data.time);
 	        for (var dev of data.devices) {
@@ -26124,7 +26137,7 @@
 	class AggregatedChart extends React.Component {
 	    constructor(props) {
 	        super(props);
-	        this.state = { options: { title: { text: "Loading..." } } };
+	        this.state = { options: { title: { text: props.title + ": Loading..." } } };
 	        this.init();
 	    }
 	    componentDidUpdate(oldProps, oldState) {
@@ -26134,6 +26147,12 @@
 	        return __awaiter(this, void 0, void 0, function* () {
 	            var agg = util_1.levelInvert(aggregate(this.props.data, this.props.rounder), 0);
 	            var meUptime = agg.get(this.props.config.selfMacAddress);
+	            if (!meUptime) {
+	                // wait for component mount
+	                yield new Promise(res => setTimeout(res, 0));
+	                this.setState({ options: { title: { text: this.props.title + ": No Data." } } });
+	                return;
+	            }
 	            agg.delete(this.props.config.selfMacAddress);
 	            var totalMeUptime = lazy_1.lazy(meUptime.values()).sum();
 	            var logIntervalMS = 1000 * 60 * this.props.config.logIntervalMinutes;
@@ -26192,7 +26211,10 @@
 	    render() {
 	        var rounder = lazy_1.lazy(this.props.granularities).filter(k => k[0] === this.state.granularity).first()[1];
 	        var rounder2 = rounder;
-	        if (this.props.offsetter) rounder2 = date => this.props.offsetter(rounder(date));
+	        if (this.props.offsetter) rounder2 = date => {
+	            var rounded = rounder(date);
+	            if (!rounded) return null;else return this.props.offsetter(rounded);
+	        };
 	        return React.createElement("div", null, React.createElement(AggregatedChart, __assign({ rounder: rounder2 }, this.props)), "Granularity: ", React.createElement("select", { value: this.state.granularity, onChange: e => this.setState({ granularity: e.target.value }) }, this.props.granularities.map(([name, rounder]) => React.createElement("option", { key: name, value: name }, name))));
 	    }
 	}
@@ -26222,7 +26244,7 @@
 	    }
 	    render() {
 	        var meUptime = this.props.deviceInfos.get(this.props.config.selfMacAddress).upCount;
-	        return React.createElement(exports.GuiContainer, null, React.createElement(GranularityChoosingChart, __assign({ granularities: this.granularities.slice(0, 4), initialGranularity: "Weekly", title: "All Time", highchartsOptions: {} }, this.props)), React.createElement(GranularityChoosingChart, __assign({ granularities: this.granularities.slice(1), initialGranularity: "3 hourly", title: "Weekly", highchartsOptions: {
+	        return React.createElement(exports.GuiContainer, null, React.createElement(GranularityChoosingChart, __assign({ granularities: this.granularities, initialGranularity: "hourly", title: "Last Week", highchartsOptions: {} }, this.props, { offsetter: date => Date.now() - date.getTime() < 1000 * 60 * 60 * 24 * 7 ? date : null })), React.createElement(GranularityChoosingChart, __assign({ granularities: this.granularities.slice(0, 4), initialGranularity: "Weekly", title: "All Time", highchartsOptions: {} }, this.props)), React.createElement(GranularityChoosingChart, __assign({ granularities: this.granularities.slice(1), initialGranularity: "3 hourly", title: "Weekly", highchartsOptions: {
 	                tooltip: { headerFormat: `<span style="font-size: 10px">{point.key:%A %H:%M}</span><br/>` },
 	                xAxis: {
 	                    labels: { format: "{value:%a. %H:%M}" }
