@@ -26244,7 +26244,7 @@
 	    }
 	    render() {
 	        var meUptime = this.props.deviceInfos.get(this.props.config.selfMacAddress).upCount;
-	        return React.createElement(exports.GuiContainer, null, React.createElement(GranularityChoosingChart, __assign({ granularities: this.granularities, initialGranularity: "hourly", title: "Last Week", highchartsOptions: {} }, this.props, { offsetter: date => Date.now() - date.getTime() < 1000 * 60 * 60 * 24 * 7 ? date : null })), React.createElement(GranularityChoosingChart, __assign({ granularities: this.granularities.slice(0, 4), initialGranularity: "Weekly", title: "All Time", highchartsOptions: {} }, this.props)), React.createElement(GranularityChoosingChart, __assign({ granularities: this.granularities.slice(1), initialGranularity: "3 hourly", title: "Weekly", highchartsOptions: {
+	        return React.createElement(exports.GuiContainer, null, React.createElement(GranularityChoosingChart, __assign({ granularities: this.granularities, initialGranularity: "3 hourly", title: "Last Week", highchartsOptions: {} }, this.props, { offsetter: date => Date.now() - date.getTime() < 1000 * 60 * 60 * 24 * 7 ? date : null })), React.createElement(GranularityChoosingChart, __assign({ granularities: this.granularities.slice(0, 4), initialGranularity: "Weekly", title: "All Time", highchartsOptions: {} }, this.props)), React.createElement(GranularityChoosingChart, __assign({ granularities: this.granularities.slice(1), initialGranularity: "3 hourly", title: "Weekly", highchartsOptions: {
 	                tooltip: { headerFormat: `<span style="font-size: 10px">{point.key:%A %H:%M}</span><br/>` },
 	                xAxis: {
 	                    labels: { format: "{value:%a. %H:%M}" }

@@ -218,7 +218,7 @@ export class Gui extends React.Component<CommonChartData, {}> {
             <GuiContainer>
                 <GranularityChoosingChart
                     granularities={this.granularities}
-                    initialGranularity="hourly"
+                    initialGranularity="3 hourly"
                     title="Last Week"
                     highchartsOptions={{}} {...this.props} offsetter={date => (Date.now() - date.getTime()) < 1000*60*60*24*7?date:null} />
                 <GranularityChoosingChart
