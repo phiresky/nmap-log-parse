@@ -39,7 +39,7 @@ export function parseXML(config: Config, filename: string, xml: string): parseXM
             return null;
         }
         if (h.nodeName !== 'host') {
-            if (["verbose", "debugging", "runstats"].indexOf(h.nodeName) >= 0) continue;
+            if (["verbose", "debugging", "runstats", "target"].indexOf(h.nodeName) >= 0) continue;
             else throw Error("unexpected " + h.nodeName);
         }
         function hasChildren<T>(obj: T): obj is T & { children: HTMLCollection } {

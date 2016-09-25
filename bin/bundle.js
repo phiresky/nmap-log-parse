@@ -25640,7 +25640,7 @@
 	            };
 	        }
 	        if (h.nodeName !== 'host') {
-	            if (["verbose", "debugging", "runstats"].indexOf(h.nodeName) >= 0) return "continue";else throw Error("unexpected " + h.nodeName);
+	            if (["verbose", "debugging", "runstats", "target"].indexOf(h.nodeName) >= 0) return "continue";else throw Error("unexpected " + h.nodeName);
 	        }
 	        function hasChildren(obj) {
 	            return !!obj.children;
@@ -25755,19 +25755,22 @@
 	    });
 	};
 	/**
-	 * Library for functional operations on lazily evaluated EcmaScript iterators / generators
+	 * Library for functional operations on lazily evaluated ECMAScript iterators / generators
 	 *
 	 * For example,
+	 *
 	 *     lazy([1,2,3,4,5]).map(x => x * x).filter(x => x > 5).forEach(x => console.log(x))
+	 *
 	 * creates the same output as
+	 *
 	 *     [1,2,3,4,5].map(x => x * x).filter(x => x > 5).forEach(x => console.log(x))
+	 *
 	 * but without creating any intermediary arrays.
 	 */
 	class Lazy {
 	    constructor(iterable) {
 	        this.iterable = iterable;
 	    }
-	    //map<A,B>(mapper: (t: T) => [A, B]): Lazy<[A, B]>
 	    map(mapper) {
 	        var self = this;
 	        return lazy(function* () {
@@ -25776,22 +25779,18 @@
 	            }
 	        }());
 	    }
-	    awaitParallel() {
-	        return __awaiter(this, void 0, void 0, function* () {
-	            return lazy((yield Promise.all([...this])));
-	        });
-	    }
-	    awaitSequential() {
-	        return __awaiter(this, void 0, void 0, function* () {
-	            var results = [];
-	            for (var promise of this) {
-	                results.push((yield promise));
-	            }return lazy(results);
-	        });
-	    }
 	    mapToTuple(mapper) {
 	        return this.map(mapper);
 	    }
+	    /**
+	     * Replace every element with any number of new elements.
+	     *
+	     * @example
+	     * ```ts
+	     * lazy.range(0, 5).flatMap(i => lazy.generate(i, () => i))
+	     * // => [1, 2, 2, 3, 3, 3, 4, 4, 4, 4]
+	     * ```
+	     */
 	    flatMap(mapper) {
 	        var self = this;
 	        return lazy(function* () {
@@ -25800,12 +25799,22 @@
 	            }
 	        }());
 	    }
-	    toMap() {
-	        return new Map(this);
-	    }
+	    /**
+	     * Create an ECMAScript Map extracting a custom key and value from each element.
+	     *
+	     * @example
+	     * ```ts
+	     * const map = lazy([{name: "John", age: 24}, {name: "Jane", age: 22}])
+	     *     .toMapKeyed(e => e.name, e => e);
+	     * map.get("John"); // {name: "John", age: 24}
+	     * ```
+	     */
 	    toMapKeyed(keyGetter, valueGetter) {
 	        return this.mapToTuple(t => [keyGetter(t), valueGetter(t)]).toMap();
 	    }
+	    /**
+	     * Retain only elements matching the filter function.
+	     */
 	    filter(filter) {
 	        var self = this;
 	        return lazy(function* () {
@@ -25815,9 +25824,9 @@
 	        }());
 	    }
 	    /**
-	      * Calls the specified callback function for all the elements in an array. The return value of the callback function is the accumulated result, and is provided as an argument in the next call to the callback function.
-	      * @param callbackfn A function that accepts up to two arguments. The reduce method calls the callbackfn function one time for each element in the array.
-	      * @param initialValue If initialValue is specified, it is used as the initial value to start the accumulation. The first call to the callbackfn function provides this value as an argument instead of an array value.
+	      * Calls the specified callback function for all the elements in an array.
+	      * The return value of the callback function is the accumulated result, and
+	      * is provided as an argument in the next call to the callback function.
 	      */
 	    reduce(callbackfn, initialValue) {
 	        var previous = initialValue;
@@ -25826,7 +25835,11 @@
 	        }
 	        return previous;
 	    }
-	    /** forces evaluation */
+	    /**
+	     * Sort the elements of this lazy in ascending order according to `keyGetter`.
+	     *
+	     * Forces complete evaluation.
+	     */
 	    sort(keyGetter) {
 	        return lazy([...this].sort((a, b) => {
 	            var ak = keyGetter(a),
@@ -25834,10 +25847,17 @@
 	            return ak < bk ? -1 : ak > bk ? 1 : 0;
 	        }));
 	    }
+	    /**
+	     * Split this Lazy into multiple lazies of length `limit`.
+	     * The last chunk may be shorter if the length is not dividable by `limit`.
+	     *
+	     * Forces partial evaluation of `limit` elements at a time.
+	     */
 	    chunk(limit) {
 	        var self = this;
 	        return lazy(function* () {
-	            // must be cached in an array, otherwise it's impossible to know if the outer lazy is finished yet when the inner lazy has not been consumed
+	            // must be cached in an array, otherwise it's impossible to know if the outer lazy
+	            // is finished yet when the inner lazy has not been consumed
 	            var cache = [];
 	            for (var element of self) {
 	                cache.push(element);
@@ -25849,12 +25869,13 @@
 	            if (cache.length > 0) yield lazy(cache);
 	        }());
 	    }
-	    sum() {
-	        return this.reduce((a, b) => a + b, 0);
-	    }
 	    /**
-	     * @example lazy([1,1,1]).intersplice((left, right) => [left - right]).collect() // [1,0,1,0,1]
-	     * @example lazy("testing").intersplice(() => [":"]) // "t:e:s:t:i:n:g"
+	     * Insert new elements between every pair of existing elements
+	     *
+	     * @example
+	     * ```ts
+	     * lazy("testing").intersplice(() => [":"]) // "t:e:s:t:i:n:g"
+	     * ```
 	     */
 	    intersplice(between) {
 	        var self = this;
@@ -25884,14 +25905,21 @@
 	    unique() {
 	        return lazy(new Set(this));
 	    }
-	    join() {
-	        return [...this].join("");
-	    }
 	    collect() {
 	        return [...this];
 	    }
 	    first() {
 	        return this[Symbol.iterator]().next().value;
+	    }
+	    some(predicate) {
+	        for (var t of this) {
+	            if (predicate(t)) return true;
+	        }return false;
+	    }
+	    every(predicate) {
+	        for (var t of this) {
+	            if (!predicate(t)) return false;
+	        }return true;
 	    }
 	    forEach(consumer) {
 	        for (var element of this) {
@@ -25901,7 +25929,19 @@
 	    concat(other) {
 	        return lazy.concat(this, other);
 	    }
-	    prefetch(count) {
+	    /**
+	     * Retrieve the given number of future elements before they are consumed. Useful for promises.
+	     *
+	     * @example The following will fetch the files {file1, file2, …, file10} three at a time.
+	     * ```ts
+	     * lazy.range(0,10)
+	     *     .map(x => fetch("file" + x).then(response => response.text()))
+	     *     .caching(3)
+	     *     .awaitSequential()
+	     *     .then(texts => texts.forEach(text => console.log(text)))
+	     * ```
+	     */
+	    caching(count) {
 	        var self = this;
 	        return lazy(function* () {
 	            var arr = [];
@@ -25919,6 +25959,59 @@
 	        };
 	        return it;
 	    }
+	    // the following functions only work on some specific Lazy types
+	    toMap() {
+	        return new Map(this);
+	    }
+	    join() {
+	        return [...this].join("");
+	    }
+	    sum() {
+	        return this.reduce((a, b) => a + b, 0);
+	    }
+	    count() {
+	        var i = 0;
+	        for (var t of this) {
+	            i++;
+	        }return i;
+	    }
+	    /**
+	     * convert a Lazy<Promise<T>> to a Promise<Lazy<T>>, starting all the promises in parallel.
+	     *
+	     * @example
+	     * ```ts
+	     * lazy.range(0,10)
+	     *     .map(x => fetch("file" + x).then(response => response.text()))
+	     *     .awaitParallel()
+	     *     .then(texts => texts.forEach(text => console.log(text)))
+	     * ```
+	     * would fetch the files "file1, file2, …, file10" at the same time
+	     */
+	    awaitParallel() {
+	        return __awaiter(this, void 0, void 0, function* () {
+	            return lazy((yield Promise.all([...this])));
+	        });
+	    }
+	    /**
+	     * convert a Lazy<Promise<T>> to a Promise<Lazy<T>>, waiting for each promise to finish before starting the next one
+	     *
+	     * @example
+	     * ```ts
+	     * lazy.range(0,10)
+	     *     .map(x => fetch("file" + x))
+	     *     .awaitSequential()
+	     *     .then(response => console.log(response))
+	     * ```
+	     * would fetch the files "file1, file2, …, file10" one after another
+	     */
+	    awaitSequential() {
+	        return __awaiter(this, void 0, void 0, function* () {
+	            var results = [];
+	            for (var promise of this) {
+	                results.push((yield promise));
+	            }return lazy(results);
+	        });
+	    }
 	}
 	function lazy(iterable) {
 	    return new Lazy(iterable);
@@ -25934,19 +26027,19 @@
 	        }());
 	    }
 	    lazy.concat = concat;
-	})(lazy = exports.lazy || (exports.lazy = {}));
-	window.lazy = lazy;
-	function test() {
-	    var i = 0;
-	    function loggingPromise(me) {
-	        console.log("created:" + me);
-	        return new Promise(res => {
-	            console.log("funi:" + me);
-	            setTimeout(res, 500);
-	        });
+	    function range(begin, endExclusive, step = 1) {
+	        return lazy(function* () {
+	            for (var i = begin; i < endExclusive; i += step) {
+	                yield i;
+	            }
+	        }());
 	    }
-	    lazy(Array.from(Array(10)).map((x, i) => i)).map(i => loggingPromise(i)).chunk(5).flatMap(x => x).awaitSequential();
-	}
+	    lazy.range = range;
+	    function generate(count, producer) {
+	        return lazy.range(0, count).map(producer);
+	    }
+	    lazy.generate = generate;
+	})(lazy = exports.lazy || (exports.lazy = {}));
 
 /***/ },
 /* 175 */
@@ -26123,8 +26216,8 @@
 	        width: ((props.total ? props.progress / props.total : 1 / (-1 / 50 * props.progress - 1) + 1) * 100).toFixed(1) + "%"
 	    } }, props.prefix, props.progress, props.suffix)));
 	class Gui extends React.Component {
-	    constructor(...args) {
-	        super(...args);
+	    constructor() {
+	        super(...arguments);
 	        this.granularities = [["Weekly", date => util_1.roundDate(date, 7, 24)], ["Daily", date => util_1.roundDate(date, 1, 24)], ["3 hourly", date => util_1.roundDate(date, 1, 3)], ["hourly", date => util_1.roundDate(date, 1, 1)], ["20 minutes", date => util_1.roundDate(date, 1, 1, 20)]];
 	    }
 	    render() {
@@ -26498,9 +26591,14 @@
 	
 	exports.defaultConfig = {
 	    logFilesPath: "./logs/",
+	    // scan backwards for 7 days before giving up when data is missing
 	    maxMissingDays: 7,
+	    // only get this many days before stopping
 	    dayGetLimit: Infinity,
+	    // must be set to the interval with which nmap is run in your crontab,
+	    // e.g. 10 if your crontab entry is "*/10 * * * ..."
 	    logIntervalMinutes: 10,
+	    // hide devices that are up less than 2% of the time
 	    minimumUptime: 0.02,
 	    selfMacAddress: "00:00:00:00:00:00",
 	    staticLogFiles: [],
