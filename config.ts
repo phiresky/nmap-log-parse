@@ -1,4 +1,5 @@
 export const defaultConfig = {
+    // path of the log files relative to the index.html file
     logFilesPath: "./logs/",
     // scan backwards for 7 days before giving up when data is missing
     maxMissingDays: 7,
