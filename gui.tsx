@@ -24,19 +24,23 @@ function aggregate(datas: NmapLog[], rounder: DateRounder): Map<number, Map<stri
         });
     return map;
 }
-
-class ReactChart extends React.Component<{ options: HighchartsOptions }, {}> {
-    chart: HighchartsChartObject;
-    container: HTMLDivElement;
+class ReactChart extends React.Component<{ options: Highcharts.Options }, {}> {
+    chart: Highcharts.ChartObject | null = null;
+    container = React.createRef<HTMLDivElement>();
     // When the DOM is ready, create the chart.
     componentDidMount() {
-        this.chart = new Highcharts.Chart(this.container, this.props.options);
+        if(!this.container.current) {
+          throw Error("no current!")
+        }
+        this.chart = new Highcharts.Chart(this.container.current!, this.props.options);
     }
     //Destroy chart before unmount.
     componentWillUnmount() {
+        if(this.chart)
         this.chart.destroy();
     }
-    componentDidUpdate(oldProps: { options: HighchartsOptions }) {
+    componentDidUpdate(oldProps: { options: Highcharts.Options }) {
+        if(!this.chart) return;
         if (oldProps.options === this.props.options) return;
         if (this.chart.series.length > 0) {
             //this.chart.destroy();
@@ -48,20 +52,20 @@ class ReactChart extends React.Component<{ options: HighchartsOptions }, {}> {
     }
     //Create the div which the chart will be rendered to.
     render() {
-        return <div ref={x => this.container = x} />
+        return <div ref={this.container} />
     }
 }
 type CommonChartData = { data: NmapLog[], config: Config, deviceInfos: Map<string, DeviceInfo & { upCount: number }> };
-type SingleChartData = CommonChartData & { title: string, highchartsOptions?: HighchartsOptions };
+type SingleChartData = CommonChartData & { title: string, highchartsOptions?: Highcharts.Options };
 type AggregatedChartData = SingleChartData & { rounder: DateRounder };
 type GranularityChoosingChartData = SingleChartData & { initialGranularity: string, granularities: Granularities, offsetter?: DateRounder };
-class AggregatedChart extends React.Component<AggregatedChartData, { options: HighchartsOptions }> {
+class AggregatedChart extends React.Component<AggregatedChartData, { options: Highcharts.Options }> {
     constructor(props: AggregatedChartData) {
         super(props);
         this.state = { options: { title: { text: props.title + ": Loading..." } } };
         this.init();
     }
-    componentDidUpdate(oldProps: AggregatedChartData, oldState: { options: HighchartsOptions }) {
+    componentDidUpdate(oldProps: AggregatedChartData, oldState: { options: Highcharts.Options }) {
         if (oldProps !== this.props) this.init();
     }
     async init() {

@@ -3,7 +3,6 @@ import {Config} from './config';
 import {parseXML, parseXMLReturn} from './util';
 import {lazy} from './lazy';
 
-(window as any).Promise = Dexie.Promise;
 export interface NmapLog {
     time: number,
     devices: Set<string> // mac addresses
@@ -24,9 +23,9 @@ export interface DeviceInfo {
     ips: string[]
 }
 export class Database extends Dexie {
-    nmapLogs: Dexie.Table<NmapLog, number>;
-    gottenFiles: Dexie.Table<GottenFiles, string>;
-    macToInfo: Dexie.Table<MacToInfo, string>;
+    nmapLogs!: Dexie.Table<NmapLog, number>;
+    gottenFiles!: Dexie.Table<GottenFiles, string>;
+    macToInfo!: Dexie.Table<MacToInfo, string>;
     constructor(private config: Config) {
         super("NmapLogDatabase");
         this.version(1).stores({

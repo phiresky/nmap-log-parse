@@ -1,3 +1,6 @@
 config.json
 logs
 node_modules
+dist
+.cache
+.vscode

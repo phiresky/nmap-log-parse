@@ -5,7 +5,7 @@ import 'whatwg-fetch';
 import { NmapLog, Database, MacToInfo, GottenFiles, DeviceInfo } from './db';
 import { lazy } from './lazy';
 import { Gui, GuiContainer, ProgressGui } from './gui';
-(window as any).Promise = Database.Promise;
+import "./node_modules/bootstrap/dist/css/bootstrap.css"
 import { defaultConfig, Config } from './config';
 const target = document.getElementById("root") !;
 
