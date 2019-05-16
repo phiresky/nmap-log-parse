@@ -1,19 +1,17 @@
 {
-    "compilerOptions": {
-        "module": "commonjs",
-        "moduleResolution": "node",
-        "target": "esnext",
-        "noImplicitAny": true,
-        "sourceMap": true,
-        "jsx": "react",
-        "strict": true,
-        "strictNullChecks": true,
-        "noImplicitThis": true,
-        "noImplicitReturns": true,
-        "noFallthroughCasesInSwitch": true,
-        "outDir": "bin"
-    },
-    "files": [
-        "main.tsx"
-    ]
+	"compilerOptions": {
+		"module": "commonjs",
+		"moduleResolution": "node",
+		"target": "esnext",
+		"noImplicitAny": true,
+		"sourceMap": true,
+		"jsx": "react",
+		"strict": true,
+		"strictNullChecks": true,
+		"noImplicitThis": true,
+		"noImplicitReturns": true,
+		"noFallthroughCasesInSwitch": true,
+		"outDir": "bin"
+	},
+	"files": ["main.tsx"]
 }
