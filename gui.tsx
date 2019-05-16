@@ -1,10 +1,10 @@
 import { Config } from "./config";
 import { NmapLog, DeviceInfo } from "./db";
 import * as React from "react";
-import * as ReactDOM from "react-dom";
 import { lazy } from "./lazy";
 import { levelInvert, DateRounder, roundDate, assignDeep } from "./util";
 import * as Highcharts from "highcharts";
+import HighchartsReact from "highcharts-react-official";
 
 function aggregate(
 	datas: NmapLog[],
@@ -33,24 +33,8 @@ function aggregate(
 	return map;
 }
 class ReactChart extends React.Component<{ options: Highcharts.Options }, {}> {
-	chart: Highcharts.ChartObject | null = null;
-	container = React.createRef<HTMLDivElement>();
-	// When the DOM is ready, create the chart.
-	componentDidMount() {
-		if (!this.container.current) {
-			throw Error("no current!");
-		}
-		this.chart = new Highcharts.Chart(
-			this.container.current!,
-			this.props.options,
-		);
-	}
-	//Destroy chart before unmount.
-	componentWillUnmount() {
-		if (this.chart) this.chart.destroy();
-	}
 	componentDidUpdate(oldProps: { options: Highcharts.Options }) {
-		if (!this.chart) return;
+		/*if (!this.chart) return;
 		if (oldProps.options === this.props.options) return;
 		if (this.chart.series.length > 0) {
 			//this.chart.destroy();
@@ -63,11 +47,16 @@ class ReactChart extends React.Component<{ options: Highcharts.Options }, {}> {
 			this.chart = new Highcharts.Chart(
 				this.container,
 				this.props.options,
-			);
+			);*/
 	}
 	//Create the div which the chart will be rendered to.
 	render() {
-		return <div ref={this.container} />;
+		return (
+			<HighchartsReact
+				highcharts={Highcharts}
+				options={this.props.options}
+			/>
+		);
 	}
 }
 type CommonChartData = {
