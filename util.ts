@@ -44,7 +44,7 @@ export function parseXML(
 ): parseXMLReturn | null {
 	const parser = new DOMParser();
 	const doc = parser.parseFromString(xml, "application/xml").documentElement;
-	let time = new Date(1000 * +doc.getAttribute("start"));
+	let time = new Date(1000 * +doc.getAttribute("start")!);
 	if (time < new Date(2000, 0))
 		// RTC has not been set, ignore scan
 		return null;
