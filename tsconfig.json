@@ -10,7 +10,7 @@
 		"noImplicitThis": true,
 		"noImplicitReturns": true,
 		"noFallthroughCasesInSwitch": true,
-		"outDir": "bin"
-	},
-	"files": ["main.tsx"]
+		"outDir": "bin",
+		"allowSyntheticDefaultImports": true
+	}
 }

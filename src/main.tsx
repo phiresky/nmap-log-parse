@@ -1,12 +1,11 @@
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 import "whatwg-fetch";
+import "../node_modules/bootstrap/dist/css/bootstrap.css";
+import { Config, defaultConfig } from "./config";
 //import 'regenerator-runtime';
-import { NmapLog, Database, MacToInfo, GottenFiles, DeviceInfo } from "./db";
-import { lazy } from "./lazy";
+import { Database, DeviceInfo, NmapLog } from "./db";
 import { Gui, GuiContainer, ProgressGui } from "./gui";
-import "./node_modules/bootstrap/dist/css/bootstrap.css";
-import { defaultConfig, Config } from "./config";
 const target = document.getElementById("root")!;
 
 async function fetchDeviceInfos(db: Database, data: NmapLog[]) {
@@ -67,9 +66,17 @@ async function run() {
 		);
 	console.timeEnd("getStatic");
 	const data = await db.nmapLogs.toArray();
+	console.time("fetchDeviceInfos");
 	const deviceInfos = await fetchDeviceInfos(db, data);
+	console.timeEnd("fetchDeviceInfos");
+	const { usage } = await navigator.storage.estimate();
 	ReactDOM.render(
-		<Gui data={data} config={config} deviceInfos={deviceInfos} />,
+		<Gui
+			data={data}
+			config={config}
+			deviceInfos={deviceInfos}
+			dataUsage={usage || 0}
+		/>,
 		target,
 	);
 }

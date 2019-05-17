@@ -1,6 +1,9 @@
 /**
  * Library for functional operations on lazily evaluated ECMAScript iterators / generators
  *
+ * TODO: replace with lodash
+ *
+ *
  * For example,
  *
  *     lazy([1,2,3,4,5]).map(x => x * x).filter(x => x > 5).forEach(x => console.log(x))
