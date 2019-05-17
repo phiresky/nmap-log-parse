@@ -3,6 +3,12 @@
 	"version": "2.0.0",
 	"description": "",
 	"main": "none",
+	"scripts": {
+		"dev": "parcel serve index.html",
+		"build": "parcel build --public-url . index.html",
+		"setup-pages": "git worktree add -b gh-pages dist",
+		"pages": "rm -r dist/* && yarn build && cd dist && git add -A . && git commit -m'update binaries'"
+	},
 	"dependencies": {
 		"@babel/core": "^7.4.4",
 		"@babel/preset-env": "^7.4.4",
