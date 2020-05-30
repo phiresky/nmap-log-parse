@@ -69,7 +69,13 @@ async function run() {
 	console.time("fetchDeviceInfos");
 	const deviceInfos = await fetchDeviceInfos(db, data);
 	console.timeEnd("fetchDeviceInfos");
-	const { usage } = await navigator.storage.estimate();
+	let usage = 0;
+	try {
+		usage = (await navigator.storage.estimate()).usage;
+	} catch (e) {
+		console.log("could not get usage", e);
+	}
+		
 	ReactDOM.render(
 		<Gui
 			data={data}
