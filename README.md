@@ -57,7 +57,7 @@ Screenshot:
 
 Made with [React], the [Dexie.js] database and [Highcharts].
 
-Get the dependencies using `yarn install`, then run `yarn dev` to build.
+Get the dependencies using `yarn install`, then run `yarn build` to build the JS into the /dist directory. For development, run `yarn dev` to start the dev server.
 
 This project is written in [TypeScript], which is basically JavaScript (ES6), but strongly typed. I can recommend [Visual Studio Code][vsc] (on linux) for IntelliSense and Refactoring support.
 
