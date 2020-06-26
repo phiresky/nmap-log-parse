@@ -29,7 +29,7 @@ Screenshot:
     **The above command _must_ be put into the root crontab!**
     Otherwise, nmap can't read mac-addresses and the output will be wrong.
 
-3. create a `config.json` file in the same folder as the `index.html` is in,
+3. create a `config.json` file in the same folder as the built `index.html` is in (dist),
    overriding any of the values in the [default config](./config.ts).
 
     for example:
@@ -47,6 +47,8 @@ Screenshot:
     ```
 
     Use `staticLogFiles` only if you have an undated log file from an older version.
+    
+    The logFilesPath is either relative to the root dirctory of the server (if starting with /) or the built index.html file (otherwise)
 
 4. Wait more than an hour. Make sure the first log file (in the form 2019-06-29.xml) exists and contains XML documents.
 5. Open `index.html` in a browser. Open it from a server (like a minimal `python3 -m http.server`) instead of from the filesystem because of Cross-Domain security.
