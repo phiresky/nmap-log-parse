@@ -14,11 +14,11 @@ import { roundDate } from "./util";
 export class ReactChart extends React.Component<
 	{
 		options: Highcharts.Options;
-		callback: (chart) => void;
+		callback: (chart: Highcharts.Chart) => void;
 	},
 	{}
 > {
-	chart = {};
+	chart: Highcharts.Chart | null = null;
 	componentDidUpdate(oldProps: { options: Highcharts.Options }) {
 		/*if (!this.chart) return;
 		if (oldProps.options === this.props.options) return;

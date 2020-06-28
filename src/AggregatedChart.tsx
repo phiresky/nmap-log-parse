@@ -58,7 +58,7 @@ export class AggregatedChart extends React.Component<
 		this.init();
 	}
 
-	chart = {};
+	chart: Highcharts.Chart | null = null;
 
 	componentDidUpdate(
 		oldProps: AggregatedChartData,
@@ -211,7 +211,7 @@ export class AggregatedChart extends React.Component<
 		return (
 			<ReactChart
 				options={this.state.options}
-				callback={(chart: {}) => (this.chart = chart)}
+				callback={(chart: Highcharts.Chart) => (this.chart = chart)}
 			/>
 		);
 	}
