@@ -24,8 +24,8 @@ export function roundDate(
 	date: Date,
 	weekday: number,
 	hours: number,
-	minutes: number = 60,
-) {
+	minutes = 60,
+): Date {
 	date.setDate(date.getDate() - (date.getDay() % weekday));
 	date.setHours(date.getHours() - (date.getHours() % hours));
 	date.setMinutes(date.getMinutes() - (date.getMinutes() % minutes), 0, 0);
@@ -35,7 +35,7 @@ export function roundDate(
 export function setHighchartsOptionsForPreset(
 	preset: Preset,
 	o: Highcharts.Options,
-) {
+): void {
 	if (!o.tooltip) o.tooltip = {};
 	o.tooltip.headerFormat = preset.headerFormat;
 	if (!o.xAxis) o.xAxis = {};
@@ -74,7 +74,7 @@ export function parseXML(
 	console.log({sax1, sax});*/
 	const parser = new DOMParser();
 	const doc = parser.parseFromString(xml, "application/xml").documentElement;
-	let time = new Date(1000 * +doc.getAttribute("start")!);
+	const time = new Date(1000 * +doc.getAttribute("start")!);
 	if (time < new Date(2000, 0))
 		// RTC has not been set, ignore scan
 		return null;
@@ -146,39 +146,4 @@ export function parseXML(
 		);
 	}
 	return scan;
-}
-
-export function assignDeep(target: any, ...others: any[]) {
-	for (const options of others) {
-		// Only deal with non-null/undefined values
-		if (options != null) {
-			// Extend the base object
-			for (const name in options) {
-				const src = target[name];
-				const copy = options[name];
-
-				// Prevent never-ending loop
-				if (target === copy) continue;
-
-				// Recurse if we're merging plain objects or arrays
-				if (copy && typeof copy === "object") {
-					let clone: any;
-					if (Array.isArray(copy)) {
-						clone = src && Array.isArray(src) ? src : [];
-					} else {
-						clone = src && typeof src === "object" ? src : {};
-					}
-
-					// Never move original objects, clone them
-					target[name] = assignDeep(clone, copy);
-				} else if (copy !== undefined) {
-					// Don't bring in undefined values
-					target[name] = copy;
-				}
-			}
-		}
-	}
-
-	// Return the modified object
-	return target;
 }

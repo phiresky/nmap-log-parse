@@ -2,13 +2,12 @@ import * as Highcharts from "highcharts";
 import HighchartsReact from "highcharts-react-official";
 import * as React from "react";
 import { CommonChartData } from "./AggregatedChart";
-import { CustomyChart, presets, Preset } from "./CustomyChart";
+import { CustomyChart, presets } from "./CustomyChart";
 import { DeviceInfo } from "./db";
 import {
 	Granularities,
 	GranularityChoosingChart,
 } from "./GranularityChoosingChart";
-import { lazy } from "./lazy";
 import { roundDate, uptimePart, setHighchartsOptionsForPreset } from "./util";
 
 export class ReactChart extends React.Component<{
@@ -53,7 +52,10 @@ const HostInfoLine = (
 	</tr>
 );
 
-export const GuiContainer = ({ dataUsage = 0, children = {} }) => (
+export const GuiContainer: React.FunctionComponent<{
+	dataUsage?: number;
+	children?: React.ReactNode;
+}> = ({ dataUsage = 0, children = {} }) => (
 	<div className="container">
 		<div className="page-header">
 			<h1>Who's in my network?</h1>{" "}
@@ -202,8 +204,11 @@ export class Gui extends React.Component<
 							</tr>
 						</thead>
 						<tbody>
-							{lazy(this.props.deviceInfos)
-								.sort(([_, info]) => -info.upCount)
+							{[...this.props.deviceInfos]
+								.sort(
+									([_a, i1], [_b, i2]) =>
+										i2.upCount - i1.upCount,
+								)
 								.map(([mac, h]) => (
 									<HostInfoLine
 										upTime={
@@ -220,8 +225,7 @@ export class Gui extends React.Component<
 										mac={mac}
 										{...h}
 									/>
-								))
-								.collect()}
+								))}
 						</tbody>
 					</table>
 				</div>

@@ -3,15 +3,15 @@ image: node:alpine
 # This folder is cached between builds
 # http://docs.gitlab.com/ce/ci/yaml/README.html#cache
 cache:
-  paths:
-    - node_modules/
+    paths:
+        - node_modules/
 
-test_async:
-  script:
-    - yarn install --frozen-lockfile
-    - yarn tsc
+typescript:
+    script:
+        - yarn install --frozen-lockfile
+        - yarn tsc
 
-test_async:
-  script:
-    - yarn install --frozen-lockfile
-    - yarn eslint --ext .ts,.tsx
+lint:
+    script:
+        - yarn install --frozen-lockfile
+        - yarn eslint --ext .ts,.tsx

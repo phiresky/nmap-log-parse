@@ -8,7 +8,6 @@ import { observable } from "mobx";
 import { lazy } from "./lazy";
 import { DateRounder, levelInvert, uptimePart } from "./util";
 import { observer } from "mobx-react";
-import HighchartsReact from "highcharts-react-official";
 export type AggregatedChartData = SingleChartData & { rounder: DateRounder };
 
 export type CommonChartData = {
