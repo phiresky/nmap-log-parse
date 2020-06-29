@@ -8,7 +8,7 @@ import { observable } from "mobx";
 import { lazy } from "./lazy";
 import { DateRounder, levelInvert, uptimePart } from "./util";
 import { observer } from "mobx-react";
-export type AggregatedChartData = SingleChartData & { rounder: DateRounder };
+type AggregatedChartData = SingleChartData & { rounder: DateRounder };
 
 export type CommonChartData = {
 	data: NmapLog[];
@@ -19,7 +19,7 @@ export type SingleChartData = CommonChartData & {
 	title: string;
 	highchartsOptions?: (o: Highcharts.Options) => void;
 };
-export function aggregate(
+function aggregate(
 	datas: NmapLog[],
 	rounder: DateRounder,
 ): Map<number, Map<string, number>> {

@@ -48,7 +48,7 @@ function assumeNonNull<T>(t: T | null | undefined, varname = "var"): T {
 	if (t == null || t === undefined) throw Error(varname + " can't be " + t);
 	return t;
 }
-export interface parseXMLReturn {
+interface parseXMLReturn {
 	online: NmapLog;
 	newInfos: MacToInfo[];
 }

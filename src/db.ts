@@ -7,7 +7,7 @@ export interface NmapLog {
 	time: number;
 	devices: Set<string>; // mac addresses
 }
-export interface GottenFiles {
+interface GottenFiles {
 	filename: string;
 	result: "404" | "success";
 }
@@ -67,7 +67,9 @@ export class Database extends Dexie {
 		statusCallback?: (state: string, done: number, total: number) => void,
 		forceFetch = false,
 	): Promise<"404" | "success"> {
-		const gotDate = await this.gottenFiles.get(filename).catch((e) => null);
+		const gotDate = await this.gottenFiles
+			.get(filename)
+			.catch((_e) => null);
 		if (!forceFetch && gotDate) return gotDate.result;
 
 		const response = await fetch(filename, { credentials: "include" });

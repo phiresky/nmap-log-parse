@@ -199,7 +199,7 @@ class Lazy<T> implements Iterable<T> {
 	}
 
 	concat(other: Iterable<T>) {
-		return lazy.concat(this, other);
+		return concat(this, other);
 	}
 
 	/**
@@ -252,7 +252,7 @@ class Lazy<T> implements Iterable<T> {
 
 	count() {
 		let i = 0;
-		for (const t of this) i++;
+		for (const _ of this) i++;
 		return i;
 	}
 
@@ -292,4 +292,12 @@ class Lazy<T> implements Iterable<T> {
 
 export function lazy<T>(iterable: Iterable<T>): Lazy<T> {
 	return new Lazy(iterable);
+}
+
+function concat<T>(...iterables: Iterable<T>[]) {
+	return lazy(
+		(function* () {
+			for (const it of iterables) yield* it;
+		})(),
+	);
 }
