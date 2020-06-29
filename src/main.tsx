@@ -3,9 +3,9 @@ import * as ReactDOM from "react-dom";
 import "whatwg-fetch";
 import "../node_modules/bootstrap/dist/css/bootstrap.css";
 import { Config, defaultConfig } from "./config";
-React;
 import { Database, DeviceInfo, NmapLog } from "./db";
 import { ProgressGui, Gui, GuiContainer } from "./gui";
+React;
 const target = document.getElementById("root");
 
 async function fetchDeviceInfos(db: Database, data: NmapLog[]) {

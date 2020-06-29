@@ -1,5 +1,6 @@
 {
 	"compilerOptions": {
+		"experimentalDecorators": true,
 		"module": "esnext",
 		"moduleResolution": "node",
 		"target": "esnext",
@@ -11,6 +12,8 @@
 		"noImplicitReturns": true,
 		"noFallthroughCasesInSwitch": true,
 		"outDir": "bin",
-		"allowSyntheticDefaultImports": true
+		"allowSyntheticDefaultImports": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true
 	}
 }

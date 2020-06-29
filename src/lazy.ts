@@ -20,7 +20,7 @@ class Lazy<T> implements Iterable<T> {
 	map<U>(mapper: (t: T) => U): Lazy<U> {
 		const self = this;
 		return lazy(
-			(function*() {
+			(function* () {
 				for (const element of self) yield mapper(element);
 			})(),
 		);
@@ -42,7 +42,7 @@ class Lazy<T> implements Iterable<T> {
 	flatMap<U>(mapper: (t: T) => Iterable<U>) {
 		const self = this;
 		return lazy(
-			(function*() {
+			(function* () {
 				for (const element of self) yield* mapper(element);
 			})(),
 		);
@@ -62,7 +62,7 @@ class Lazy<T> implements Iterable<T> {
 		keyGetter: (t: T) => K,
 		valueGetter: (t: T) => V,
 	): Map<K, V> {
-		return this.mapToTuple(t => [keyGetter(t), valueGetter(t)]).toMap();
+		return this.mapToTuple((t) => [keyGetter(t), valueGetter(t)]).toMap();
 	}
 
 	/**
@@ -71,7 +71,7 @@ class Lazy<T> implements Iterable<T> {
 	filter(filter: (t: T) => boolean) {
 		const self = this;
 		return lazy(
-			(function*() {
+			(function* () {
 				for (const element of self) if (filter(element)) yield element;
 			})(),
 		);
@@ -117,7 +117,7 @@ class Lazy<T> implements Iterable<T> {
 	chunk(limit: number): Lazy<Lazy<T>> {
 		const self = this;
 		return lazy(
-			(function*(): Iterable<Lazy<T>> {
+			(function* (): Iterable<Lazy<T>> {
 				// must be cached in an array, otherwise it's impossible to know if the outer lazy
 				// is finished yet when the inner lazy has not been consumed
 				let cache = [] as T[];
@@ -145,7 +145,7 @@ class Lazy<T> implements Iterable<T> {
 		const self = this;
 		const nothing: T = {} as T;
 		return lazy(
-			(function*(): Iterable<T | U> {
+			(function* (): Iterable<T | U> {
 				let last = nothing;
 				for (const element of self) {
 					if (last !== nothing) yield* between(last, element);
@@ -159,7 +159,7 @@ class Lazy<T> implements Iterable<T> {
 	zipWith<U, V>(other: Iterable<U>, combinator: (t: T, u: U) => V) {
 		const self = this;
 		return lazy(
-			(function*(): Iterable<V> {
+			(function* (): Iterable<V> {
 				const selfIt = self[Symbol.iterator]();
 				const otherIt = other[Symbol.iterator]();
 				while (true) {
@@ -180,7 +180,7 @@ class Lazy<T> implements Iterable<T> {
 		return [...this];
 	}
 
-	first() {
+	first(): T {
 		return this[Symbol.iterator]().next().value;
 	}
 
@@ -217,7 +217,7 @@ class Lazy<T> implements Iterable<T> {
 	caching(count: number) {
 		const self = this;
 		return lazy(
-			(function*() {
+			(function* () {
 				const arr: T[] = [];
 				for (const element of self) {
 					arr.push(element);
@@ -297,14 +297,14 @@ export function lazy<T>(iterable: Iterable<T>) {
 export namespace lazy {
 	export function concat<T>(...iterables: Iterable<T>[]) {
 		return lazy(
-			(function*() {
+			(function* () {
 				for (const it in iterables) yield* it;
 			})(),
 		);
 	}
 	export function range(begin: number, endExclusive: number, step = 1) {
 		return lazy(
-			(function*() {
+			(function* () {
 				for (let i = begin; i < endExclusive; i += step) yield i;
 			})(),
 		);
@@ -318,14 +318,14 @@ export namespace lazy {
 
 function test() {
 	function loggingPromise(me: number) {
-		return new Promise(res => {
+		return new Promise((res) => {
 			console.log("evaluating:" + me);
 			setTimeout(res, 500);
 		});
 	}
 	lazy.range(0, 10)
-		.map(i => loggingPromise(i))
+		.map((i) => loggingPromise(i))
 		.chunk(5)
-		.flatMap(x => x)
+		.flatMap((x) => x)
 		.awaitSequential();
 }

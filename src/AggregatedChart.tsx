@@ -4,8 +4,11 @@ import * as React from "react";
 import { Config } from "./config";
 import { DeviceInfo, NmapLog } from "./db";
 import { ReactChart } from "./gui";
+import { observable } from "mobx";
 import { lazy } from "./lazy";
-import { assignDeep, DateRounder, levelInvert } from "./util";
+import { assignDeep, DateRounder, levelInvert, uptimePart } from "./util";
+import { observer } from "mobx-react";
+import HighchartsReact from "highcharts-react-official";
 export type AggregatedChartData = SingleChartData & { rounder: DateRounder };
 
 export type CommonChartData = {
@@ -15,7 +18,7 @@ export type CommonChartData = {
 };
 export type SingleChartData = CommonChartData & {
 	title: string;
-	highchartsOptions?: Highcharts.Options;
+	highchartsOptions?: (o: Highcharts.Options) => void;
 };
 export function aggregate(
 	datas: NmapLog[],
@@ -44,33 +47,30 @@ export function aggregate(
 	return map;
 }
 
-export class AggregatedChart extends React.Component<
-	AggregatedChartData,
-	{
-		options: Highcharts.Options;
-	}
-> {
+@observer
+export class AggregatedChart extends React.Component<AggregatedChartData> {
+	@observable
+	chartOptions: Highcharts.Options;
+
 	constructor(props: AggregatedChartData) {
 		super(props);
-		this.state = {
-			options: { title: { text: props.title + ": Loading..." } },
-		};
+		this.chartOptions = { title: { text: props.title + ": Loading..." } };
 	}
 
 	chart: Highcharts.Chart | null = null;
-	componentDidMount() {
-		void this.init();
+	componentDidMount(): void {
+		this.init();
 	}
 
 	componentDidUpdate(
 		oldProps: AggregatedChartData,
-		oldState: {
+		_oldState: {
 			options: Highcharts.Options;
 		},
-	) {
+	): void {
 		if (oldProps !== this.props) this.init();
 	}
-	async init() {
+	init(): void {
 		const agg = levelInvert(
 			aggregate(this.props.data, this.props.rounder),
 			0,
@@ -105,33 +105,33 @@ export class AggregatedChart extends React.Component<
 			return null;
 		}
 
-		const data = lazy(agg)
+		const data = [...agg.entries()]
 			.filter(
 				([mac, vals]) =>
 					lazy(vals.values()).sum() >=
 					totalMeUptime * this.props.config.minimumUptime,
 			)
-			.map(([mac, map]) => {
-				const info = this.props.deviceInfos.get(mac)!;
+			.map<Highcharts.SeriesLineOptions>(([mac, map]) => {
+				const info = this.props.deviceInfos.get(mac);
+				const footer = `
+				<p><strong>MAC</strong>: ${mac} ${info?.vendor?.join(", ") || "???"}</p><br/>
+				<p><strong>Hostnames</strong>:<br/>${
+					info?.hostnames?.join("<br/>") || "???"
+				}</p><br/>
+				<p><strong>IPs</strong>:<br/>${info?.ips?.join("<br/>") || "???"}</p>
+			`;
 				return {
-					name: getNiceHostname(info) || mac,
+					name: (info && getNiceHostname(info)) || mac,
+					type: "line",
 					tooltip: {
-						footerFormat: `
-                            <p><strong>MAC</strong>: ${mac} ${
-							info.vendor
-						}</p><br/>
-                            <p><strong>Hostnames</strong>:<br/>${info.hostnames.join(
-								"<br/>",
-							)}</p><br/>
-                            <p><strong>IPs</strong>:<br/>${info.ips.join(
-								"<br/>",
-							)}</p>
-                        `,
+						footerFormat: footer,
 					},
 					data: lazy(map)
 						.mapToTuple(([time, amount]) => [
 							time,
-							((100 * amount) / meUptime.get(time)) | 0,
+							Math.round(
+								100 * uptimePart(amount, meUptime.get(time)),
+							),
 						])
 						.intersplice((left, right) => {
 							const distance = right[0] - left[0];
@@ -145,71 +145,68 @@ export class AggregatedChart extends React.Component<
 						})
 						.collect(),
 				};
-			})
-			.sort((no) => no.name);
-		Highcharts.setOptions({ global: { useUTC: false } });
-		this.setState({
-			options: assignDeep(
-				{
-					chart: { type: "line", zoomType: "x" },
-					title: { text: this.props.title },
-					xAxis: {
-						type: "datetime",
-					},
-					tooltip: {
-						valueSuffix: "%",
-					},
-					plotOptions: {
-						line: { marker: { enabled: false }, animation: false },
-						series: {
-							events: {
-								legendItemClick() {
-									let chart: Highcharts.Chart = this.chart,
-										series: Highcharts.Series =
-											chart.series;
-									if (this.index === 0) {
-										if (!chart.showHideFlag) {
-											series.forEach((series) => {
-												series.hide();
-											});
-										} else {
-											series.forEach((series) => {
-												series.show();
-											});
-										}
-										chart.showHideFlag = !chart.showHideFlag;
-										this.hide();
-									}
-								},
-							},
+			});
+		data.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+		const co: Highcharts.Options = {
+			chart: { type: "line", zoomType: "x" },
+			title: { text: this.props.title },
+			time: { useUTC: true },
+			xAxis: {
+				type: "datetime",
+			},
+			tooltip: {
+				valueSuffix: "%",
+			},
+			plotOptions: {
+				line: { marker: { enabled: false }, animation: false },
+				series: {
+					events: {
+						legendItemClick() {
+							const chart: Highcharts.Chart = this.chart;
+							const series: Highcharts.Series[] = chart.series;
+							if (this.index === 0) {
+								if (!chart.showHideFlag) {
+									series.forEach((series) => {
+										series.hide();
+									});
+								} else {
+									series.forEach((series) => {
+										series.show();
+									});
+								}
+								chart.showHideFlag = !chart.showHideFlag;
+								this.hide();
+							}
 						},
 					},
-					yAxis: {
-						title: { text: "Online" },
-						labels: { format: "{value:%.0f}%" },
-						min: 0,
-						max: 100,
-					},
-					/*legend: {
+				},
+			},
+			yAxis: {
+				title: { text: "Online" },
+				labels: { format: "{value:%.0f}%" },
+				min: 0,
+				max: 100,
+			},
+			/*legend: {
 						layout: "vertical",
 					},*/
-					// tooltip: {},
-					series: [
-						{
-							name: "Show/Hide all",
-							visible: true,
-						},
-						...data.collect(),
-					],
+			// tooltip: {},
+			series: [
+				{
+					name: "Show/Hide all",
+					visible: true,
+					type: "line",
 				},
-				this.props.highchartsOptions,
-			),
-		});
+				...data,
+			],
+		};
+		if (this.props.highchartsOptions) this.props.highchartsOptions(co);
+		this.chartOptions = co;
 	}
-	render() {
+	render(): React.ReactElement {
 		return (
 			<ReactChart
-				options={this.state.options}
+				options={this.chartOptions}
 				callback={(chart: Highcharts.Chart) => (this.chart = chart)}
 			/>
 		);

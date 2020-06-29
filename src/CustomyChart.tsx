@@ -5,7 +5,7 @@ import {
 	Granularities,
 	GranularityChoosingChart,
 } from "./GranularityChoosingChart";
-import { DateRounder } from "./util";
+import { DateRounder, setHighchartsOptionsForPreset } from "./util";
 
 export const presets = {
 	weekly: {
@@ -29,6 +29,7 @@ export const presets = {
 		},
 	},
 };
+export type Preset = typeof presets["weekly"];
 
 function useTwoWay<T, V>(
 	initialValue: V,
@@ -112,18 +113,14 @@ function _CustomyChart({
 					granularities={granularities}
 					initialGranularity="20 minutes"
 					title={data.title}
-					highchartsOptions={{
-						tooltip: {
-							headerFormat: data.preset
-								? data.preset.headerFormat
-								: undefined,
-						},
-						xAxis: {
-							labels: data.preset
-								? data.preset.xAxisLabels
-								: undefined,
-						},
-					}}
+					highchartsOptions={
+						data.preset
+							? setHighchartsOptionsForPreset.bind(
+									null,
+									data.preset,
+							  )
+							: undefined
+					}
 					offsetter={data.offsetter}
 					{...props}
 				/>

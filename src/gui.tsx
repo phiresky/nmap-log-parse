@@ -2,14 +2,14 @@ import * as Highcharts from "highcharts";
 import HighchartsReact from "highcharts-react-official";
 import * as React from "react";
 import { CommonChartData } from "./AggregatedChart";
-import { CustomyChart, presets } from "./CustomyChart";
+import { CustomyChart, presets, Preset } from "./CustomyChart";
 import { DeviceInfo } from "./db";
 import {
 	Granularities,
 	GranularityChoosingChart,
 } from "./GranularityChoosingChart";
 import { lazy } from "./lazy";
-import { roundDate } from "./util";
+import { roundDate, uptimePart, setHighchartsOptionsForPreset } from "./util";
 
 export class ReactChart extends React.Component<{
 	options: Highcharts.Options;
@@ -40,7 +40,9 @@ const HostInfoLine = (
 	<tr>
 		{[
 			info.displayname,
-			`${info.mac} ${info.vendor.length > 0 ? `(${info.vendor})` : ""}`,
+			`${info.mac} ${
+				info.vendor.length > 0 ? `(${info.vendor.join(", ")})` : ""
+			}`,
 			<Ul list={info.hostnames} />,
 			<Ul list={info.ips} />,
 			info.upTime.toFixed(0) + "h",
@@ -116,11 +118,11 @@ export class Gui extends React.Component<
 	CommonChartData & { dataUsage: number }
 > {
 	granularities: Granularities = [
-		["Weekly", (date) => roundDate(date, 7, 24)],
-		["Daily", (date) => roundDate(date, 1, 24)],
-		["3 hourly", (date) => roundDate(date, 1, 3)],
-		["hourly", (date) => roundDate(date, 1, 1)],
-		["20 minutes", (date) => roundDate(date, 1, 1, 20)],
+		["Weekly", (date: Date): Date => roundDate(date, 7, 24)],
+		["Daily", (date: Date): Date => roundDate(date, 1, 24)],
+		["3 hourly", (date: Date): Date => roundDate(date, 1, 3)],
+		["hourly", (date: Date): Date => roundDate(date, 1, 1)],
+		["20 minutes", (date: Date): Date => roundDate(date, 1, 1, 20)],
 	];
 	render(): React.ReactElement {
 		const me = this.props.deviceInfos.get(this.props.config.selfMacAddress);
@@ -131,7 +133,6 @@ export class Gui extends React.Component<
 					granularities={this.granularities}
 					initialGranularity="3 hourly"
 					title="Last Week"
-					highchartsOptions={{}}
 					{...this.props}
 					offsetter={(date) =>
 						Date.now() - date.getTime() < 1000 * 60 * 60 * 24 * 7
@@ -144,7 +145,6 @@ export class Gui extends React.Component<
 					granularities={this.granularities}
 					initialGranularity="Daily"
 					title="Last Month"
-					highchartsOptions={{}}
 					{...this.props}
 					offsetter={(date) =>
 						Date.now() - date.getTime() < 1000 * 60 * 60 * 24 * 31
@@ -157,7 +157,6 @@ export class Gui extends React.Component<
 					granularities={this.granularities.slice(0, 4)}
 					initialGranularity="Weekly"
 					title="All Time"
-					highchartsOptions={{}}
 					{...this.props}
 				/>
 				<hr />
@@ -165,14 +164,10 @@ export class Gui extends React.Component<
 					granularities={this.granularities.slice(1)}
 					initialGranularity="3 hourly"
 					title={presets.weekly.title}
-					highchartsOptions={{
-						tooltip: {
-							headerFormat: presets.weekly.headerFormat,
-						},
-						xAxis: {
-							labels: presets.weekly.xAxisLabels,
-						},
-					}}
+					highchartsOptions={setHighchartsOptionsForPreset.bind(
+						null,
+						presets.weekly,
+					)}
 					offsetter={presets.weekly.offset}
 					{...this.props}
 				/>
@@ -181,14 +176,10 @@ export class Gui extends React.Component<
 					granularities={this.granularities.slice(2)}
 					initialGranularity="20 minutes"
 					title={presets.daily.title}
-					highchartsOptions={{
-						tooltip: {
-							headerFormat: presets.daily.headerFormat,
-						},
-						xAxis: {
-							labels: presets.daily.xAxisLabels,
-						},
-					}}
+					highchartsOptions={setHighchartsOptionsForPreset.bind(
+						null,
+						presets.daily,
+					)}
 					offsetter={presets.daily.offset}
 					{...this.props}
 				/>
@@ -221,7 +212,10 @@ export class Gui extends React.Component<
 													.logIntervalMinutes) /
 											60
 										}
-										upRelative={h.upCount / meUptime}
+										upRelative={uptimePart(
+											h.upCount,
+											meUptime,
+										)}
 										key={mac}
 										mac={mac}
 										{...h}

@@ -1,6 +1,5 @@
 import * as React from "react";
 import { AggregatedChart, SingleChartData } from "./AggregatedChart";
-import { lazy } from "./lazy";
 import { DateRounder } from "./util";
 
 export type Granularities = [string, DateRounder][];
@@ -21,17 +20,20 @@ export class GranularityChoosingChart extends React.Component<
 		super(props);
 		this.state = { granularity: props.initialGranularity };
 	}
-	render() {
-		const rounder = lazy(this.props.granularities)
-			.filter((k) => k[0] === this.state.granularity)
-			.first()[1];
+	render(): React.ReactElement {
+		const rounder = this.props.granularities.find(
+			(k) => k[0] === this.state.granularity,
+		)?.[1];
+		if (!rounder) return <>no rounder found</>;
 		let rounder2 = rounder;
-		if (this.props.offsetter)
+		const offsetter = this.props.offsetter;
+		if (offsetter) {
 			rounder2 = (date) => {
 				const rounded = rounder(date);
 				if (!rounded) return null;
-				else return this.props.offsetter(rounded);
+				else return offsetter(rounded);
 			};
+		}
 		return (
 			<div>
 				<AggregatedChart rounder={rounder2} {...this.props} />
@@ -44,7 +46,7 @@ export class GranularityChoosingChart extends React.Component<
 						})
 					}
 				>
-					{this.props.granularities.map(([name, rounder]) => (
+					{this.props.granularities.map(([name, _rounder]) => (
 						<option key={name} value={name}>
 							{name}
 						</option>

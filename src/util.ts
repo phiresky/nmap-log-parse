@@ -1,6 +1,7 @@
 import { lazy } from "./lazy";
 import { NmapLog, MacToInfo } from "./db";
 import { Config } from "./config";
+import type { Preset } from "./CustomyChart";
 
 export function levelInvert<A, B, C, D>(
 	map: Map<A, Map<B, C>>,
@@ -31,6 +32,17 @@ export function roundDate(
 	return date;
 }
 
+export function setHighchartsOptionsForPreset(
+	preset: Preset,
+	o: Highcharts.Options,
+) {
+	if (!o.tooltip) o.tooltip = {};
+	o.tooltip.headerFormat = preset.headerFormat;
+	if (!o.xAxis) o.xAxis = {};
+	if (Array.isArray(o.xAxis)) throw Error("can't handle multiple x");
+	o.xAxis.labels = preset.xAxisLabels;
+}
+
 export type DateRounder = (d: Date) => Date | null;
 function assumeNonNull<T>(t: T | null | undefined, varname = "var"): T {
 	if (t == null || t === undefined) throw Error(varname + " can't be " + t);
@@ -42,6 +54,14 @@ export interface parseXMLReturn {
 }
 function hasChildren<T>(obj: T): obj is T & { children: HTMLCollection } {
 	return !!(obj as any).children;
+}
+
+export function uptimePart(t: number, meUptime: number | undefined): number {
+	if (!meUptime) {
+		console.warn("could not get own uptime");
+		// don't know how long we were up or meUptime = 0
+		return t;
+	} else return t / meUptime;
 }
 
 export function parseXML(

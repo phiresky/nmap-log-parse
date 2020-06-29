@@ -101,7 +101,7 @@ export class Database extends Dexie {
 					await this.transaction(
 						"rw",
 						[this.gottenFiles, this.nmapLogs, this.macToInfo],
-						async () => {
+						() => {
 							for (const rawXML of rawXMLs) {
 								if (rawXML.length == 0) continue;
 								const scan = parseXML(
@@ -124,11 +124,11 @@ export class Database extends Dexie {
 		await this.gottenFiles.put({ filename, result: "success" });
 		return "success";
 	}
-	async getAllDates(progressCallback: (days: number) => void) {
+	async getAllDates(progressCallback: (days: number) => void): Promise<void> {
 		const current = new Date();
 		let failures = 0;
 		let gotten = 0;
-		while (true) {
+		while (current > new Date(2010, 0, 1)) {
 			const resp = await this.getForDate(current);
 			if (resp === "404") {
 				failures++;
