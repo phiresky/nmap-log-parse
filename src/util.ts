@@ -45,7 +45,8 @@ export function setHighchartsOptionsForPreset(
 
 export type DateRounder = (d: Date) => Date | null;
 function assumeNonNull<T>(t: T | null | undefined, varname = "var"): T {
-	if (t == null || t === undefined) throw Error(varname + " can't be " + t);
+	if (t == null || t === undefined)
+		throw Error(`${varname} can't be ${String(t)}`);
 	return t;
 }
 interface parseXMLReturn {
@@ -53,7 +54,7 @@ interface parseXMLReturn {
 	newInfos: MacToInfo[];
 }
 function hasChildren<T>(obj: T): obj is T & { children: HTMLCollection } {
-	return !!(obj as any).children;
+	return !!(obj as { children?: HTMLCollection }).children;
 }
 
 export function uptimePart(t: number, meUptime: number | undefined): number {
@@ -107,7 +108,7 @@ export function parseXML(
 					mac = config.selfMacAddress;
 			}
 			if (a.nodeName === "address") {
-				let type = a.getAttribute("addrtype");
+				const type = a.getAttribute("addrtype");
 				if (type === "mac") {
 					mac = assumeNonNull(a.getAttribute("addr"), "mac");
 					scan.newInfos.push({

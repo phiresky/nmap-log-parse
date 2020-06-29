@@ -14,4 +14,4 @@ typescript:
 lint:
     script:
         - yarn install --frozen-lockfile
-        - yarn eslint --ext .ts,.tsx
+        - yarn lint

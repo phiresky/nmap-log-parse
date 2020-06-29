@@ -181,7 +181,7 @@ class Lazy<T> implements Iterable<T> {
 	}
 
 	first(): T {
-		return this[Symbol.iterator]().next().value;
+		return this[Symbol.iterator]().next().value as T;
 	}
 
 	some(predicate: (t: T) => boolean) {

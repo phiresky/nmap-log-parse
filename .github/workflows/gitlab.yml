@@ -1,0 +1,25 @@
+name: Run GitLab CI on GitHub ( ͡° ͜ʖ ͡°)
+
+on:
+    push:
+        branches: ["*"]
+    pull_request:
+        branches: ["*"]
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+
+        # Steps represent a sequence of tasks that will be executed as part of the job
+        steps:
+            - uses: actions/checkout@v2
+            - name: install gitlab runner
+              run: |
+                  curl -L https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh | sudo bash
+                  sudo apt install gitlab-runner
+            - name: typescript
+              run: |
+                  ls -al
+                  gitlab-runner exec docker typescript
+            - name: eslint
+              run: gitlab-runner exec docker lint

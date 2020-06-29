@@ -4,6 +4,7 @@
 	"description": "",
 	"main": "none",
 	"scripts": {
+		"lint": "eslint . --ext .ts,.tsx",
 		"dev": "parcel watch --public-url . index.html",
 		"build": "parcel build --public-url . index.html",
 		"setup-pages": "git worktree add -b gh-pages dist",
