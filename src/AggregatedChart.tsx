@@ -6,7 +6,7 @@ import { DeviceInfo, NmapLog } from "./db";
 import { ReactChart } from "./gui";
 import { observable } from "mobx";
 import { lazy } from "./lazy";
-import { assignDeep, DateRounder, levelInvert, uptimePart } from "./util";
+import { DateRounder, levelInvert, uptimePart } from "./util";
 import { observer } from "mobx-react";
 import HighchartsReact from "highcharts-react-official";
 export type AggregatedChartData = SingleChartData & { rounder: DateRounder };
@@ -25,7 +25,7 @@ export function aggregate(
 	rounder: DateRounder,
 ): Map<number, Map<string, number>> {
 	const map = new Map<number, Map<string, number>>();
-	lazy(datas)
+	datas
 		.flatMap((log) => {
 			const rounded = rounder(new Date(log.time));
 			return rounded
@@ -37,7 +37,7 @@ export function aggregate(
 				  ]
 				: [];
 		})
-		.sort((log) => log.time)
+		.sort((a, b) => a.time - b.time)
 		.forEach((data) => {
 			if (!map.has(data.time)) map.set(data.time, new Map());
 			const map2 = map.get(data.time)!;
@@ -107,7 +107,7 @@ export class AggregatedChart extends React.Component<AggregatedChartData> {
 
 		const data = [...agg.entries()]
 			.filter(
-				([mac, vals]) =>
+				([_mac, vals]) =>
 					lazy(vals.values()).sum() >=
 					totalMeUptime * this.props.config.minimumUptime,
 			)
@@ -147,6 +147,7 @@ export class AggregatedChart extends React.Component<AggregatedChartData> {
 				};
 			});
 		data.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+		let showHideFlag = false;
 		const co: Highcharts.Options = {
 			chart: { type: "line", zoomType: "x" },
 			title: { text: this.props.title },
@@ -162,19 +163,15 @@ export class AggregatedChart extends React.Component<AggregatedChartData> {
 				series: {
 					events: {
 						legendItemClick() {
-							const chart: Highcharts.Chart = this.chart;
-							const series: Highcharts.Series[] = chart.series;
+							const chart = this.chart;
+							const series = chart.series;
 							if (this.index === 0) {
-								if (!chart.showHideFlag) {
-									series.forEach((series) => {
-										series.hide();
-									});
+								if (!showHideFlag) {
+									series.forEach((series) => series.hide());
 								} else {
-									series.forEach((series) => {
-										series.show();
-									});
+									series.forEach((series) => series.show());
 								}
-								chart.showHideFlag = !chart.showHideFlag;
+								showHideFlag = !showHideFlag;
 								this.hide();
 							}
 						},

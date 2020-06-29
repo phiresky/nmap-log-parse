@@ -5,6 +5,8 @@
 		"moduleResolution": "node",
 		"target": "esnext",
 		"noImplicitAny": true,
+		"noEmit": true,
+		"isolatedModules": true,
 		"sourceMap": true,
 		"jsx": "react",
 		"strict": true,

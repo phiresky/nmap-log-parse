@@ -290,42 +290,6 @@ class Lazy<T> implements Iterable<T> {
 	}
 }
 
-export function lazy<T>(iterable: Iterable<T>) {
+export function lazy<T>(iterable: Iterable<T>): Lazy<T> {
 	return new Lazy(iterable);
-}
-
-export namespace lazy {
-	export function concat<T>(...iterables: Iterable<T>[]) {
-		return lazy(
-			(function* () {
-				for (const it in iterables) yield* it;
-			})(),
-		);
-	}
-	export function range(begin: number, endExclusive: number, step = 1) {
-		return lazy(
-			(function* () {
-				for (let i = begin; i < endExclusive; i += step) yield i;
-			})(),
-		);
-	}
-	export function generate<T>(count: number, producer: (index: number) => T) {
-		return lazy.range(0, count).map(producer);
-	}
-}
-
-(window as any).lazy = lazy;
-
-function test() {
-	function loggingPromise(me: number) {
-		return new Promise((res) => {
-			console.log("evaluating:" + me);
-			setTimeout(res, 500);
-		});
-	}
-	lazy.range(0, 10)
-		.map((i) => loggingPromise(i))
-		.chunk(5)
-		.flatMap((x) => x)
-		.awaitSequential();
 }
