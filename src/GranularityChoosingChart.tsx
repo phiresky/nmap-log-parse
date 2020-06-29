@@ -23,14 +23,14 @@ export class GranularityChoosingChart extends React.Component<
 	}
 	render() {
 		const rounder = lazy(this.props.granularities)
-			.filter(k => k[0] === this.state.granularity)
+			.filter((k) => k[0] === this.state.granularity)
 			.first()[1];
 		let rounder2 = rounder;
 		if (this.props.offsetter)
-			rounder2 = date => {
+			rounder2 = (date) => {
 				const rounded = rounder(date);
 				if (!rounded) return null;
-				else return this.props.offsetter!(rounded);
+				else return this.props.offsetter(rounded);
 			};
 		return (
 			<div>
@@ -38,7 +38,7 @@ export class GranularityChoosingChart extends React.Component<
 				Granularity:{" "}
 				<select
 					value={this.state.granularity}
-					onChange={e =>
+					onChange={(e) =>
 						this.setState({
 							granularity: (e.target as HTMLSelectElement).value,
 						})

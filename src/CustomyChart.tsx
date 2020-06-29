@@ -12,7 +12,7 @@ export const presets = {
 		title: "Weekly",
 		headerFormat: `<span style="font-size: 10px">{point.key:%A %H:%M}</span><br/>`,
 		xAxisLabels: { format: "{value:%a. %H:%M}" },
-		offset(d: Date) {
+		offset: (d: Date): Date => {
 			d.setFullYear(1970);
 			d.setMonth(0, d.getDay() + 5);
 			return d;
@@ -22,7 +22,7 @@ export const presets = {
 		title: "Daily",
 		headerFormat: `<span style="font-size: 10px">{point.key:%H:%M}</span><br/>`,
 		xAxisLabels: { format: "{value:%H:%M}" },
-		offset(d: Date) {
+		offset: (d: Date): Date => {
 			d.setFullYear(1970);
 			d.setMonth(0, 1);
 			return d;
@@ -51,8 +51,8 @@ function useTwoWayDate(initialDate: Date) {
 		Date | null
 	>(
 		initialDate,
-		e => e.valueAsDate as Date | null,
-		v => ({ value: v ? v.toISOString().slice(0, 10) : "" }),
+		(e) => e.valueAsDate,
+		(v) => ({ value: v ? v.toISOString().slice(0, 10) : "" }),
 	);
 }
 const defaultOldDate = new Date();
@@ -72,20 +72,19 @@ function _CustomyChart({
 		offsetter: ((d: Date) => d) as DateRounder,
 		active: false,
 		title: "Custom Chart",
-		preset: null as null | (typeof presets.daily),
+		preset: null as null | typeof presets.daily,
 		rerender() {
 			this.active = true;
 			this.preset =
 				data.aggregator !== "none" ? presets[data.aggregator] : null;
 
-			const offsetter = this.preset ? this.preset.offset : (d: Date) => d;
 			this.offsetter = (d: Date) => {
 				if (
 					(fromDate.value && d < fromDate.value) ||
 					(toDate.value && d > toDate.value)
 				)
 					return null;
-				return offsetter(d);
+				return this.preset ? this.preset.offset(d) : d;
 			};
 		},
 	}));
@@ -97,11 +96,11 @@ function _CustomyChart({
 			Aggregator{" "}
 			<select
 				value={data.aggregator}
-				onChange={e =>
+				onChange={(e) =>
 					(data.aggregator = e.currentTarget.value as AggChoice)
 				}
 			>
-				{aggregationChoices.map(choice => (
+				{aggregationChoices.map((choice) => (
 					<option value={choice} key={choice}>
 						{choice}
 					</option>

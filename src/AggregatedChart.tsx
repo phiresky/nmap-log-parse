@@ -23,7 +23,7 @@ export function aggregate(
 ): Map<number, Map<string, number>> {
 	const map = new Map<number, Map<string, number>>();
 	lazy(datas)
-		.flatMap(log => {
+		.flatMap((log) => {
 			const rounded = rounder(new Date(log.time));
 			return rounded
 				? [
@@ -34,8 +34,8 @@ export function aggregate(
 				  ]
 				: [];
 		})
-		.sort(log => log.time)
-		.forEach(data => {
+		.sort((log) => log.time)
+		.forEach((data) => {
 			if (!map.has(data.time)) map.set(data.time, new Map());
 			const map2 = map.get(data.time)!;
 			for (const dev of data.devices)
@@ -55,10 +55,12 @@ export class AggregatedChart extends React.Component<
 		this.state = {
 			options: { title: { text: props.title + ": Loading..." } },
 		};
-		this.init();
 	}
 
 	chart: Highcharts.Chart | null = null;
+	componentDidMount() {
+		void this.init();
+	}
 
 	componentDidUpdate(
 		oldProps: AggregatedChartData,
@@ -75,8 +77,6 @@ export class AggregatedChart extends React.Component<
 		);
 		const meUptime = agg.get(this.props.config.selfMacAddress);
 		if (!meUptime) {
-			// wait for component mount
-			await new Promise(res => setTimeout(res, 0));
 			this.setState({
 				options: { title: { text: this.props.title + ": No Data." } },
 			});
@@ -87,26 +87,25 @@ export class AggregatedChart extends React.Component<
 		const totalMeUptime = lazy(meUptime.values()).sum();
 		const logIntervalMS = 1000 * 60 * this.props.config.logIntervalMinutes;
 		let minDistance = Infinity;
-		{
-			const hncounts = _([...this.props.deviceInfos.values()])
-				.flatMap(p => p.hostnames)
-				.countBy(z => z)
-				.value();
-			const ipcounts = _([...this.props.deviceInfos.values()])
-				.flatMap(p => p.ips)
-				.countBy(z => z)
-				.value();
 
-			var getNiceHostname = function getNiceHostname(info: DeviceInfo) {
-				if (info.displayname) return info.displayname;
-				if (info.hostnames.length > 0)
-					return minBy(info.hostnames, p => hncounts[p]);
-				if (info.ips.length > 0)
-					return minBy(info.ips, p => ipcounts[p]);
-				return null;
-			};
+		const hncounts = _([...this.props.deviceInfos.values()])
+			.flatMap((p) => p.hostnames)
+			.countBy((z) => z)
+			.value();
+		const ipcounts = _([...this.props.deviceInfos.values()])
+			.flatMap((p) => p.ips)
+			.countBy((z) => z)
+			.value();
+
+		function getNiceHostname(info: DeviceInfo) {
+			if (info.displayname) return info.displayname;
+			if (info.hostnames.length > 0)
+				return minBy(info.hostnames, (p) => hncounts[p]);
+			if (info.ips.length > 0) return minBy(info.ips, (p) => ipcounts[p]);
+			return null;
 		}
-		const data = await lazy(agg)
+
+		const data = lazy(agg)
 			.filter(
 				([mac, vals]) =>
 					lazy(vals.values()).sum() >=
@@ -147,7 +146,7 @@ export class AggregatedChart extends React.Component<
 						.collect(),
 				};
 			})
-			.sort(no => no.name);
+			.sort((no) => no.name);
 		Highcharts.setOptions({ global: { useUTC: false } });
 		this.setState({
 			options: assignDeep(
@@ -170,11 +169,11 @@ export class AggregatedChart extends React.Component<
 											chart.series;
 									if (this.index === 0) {
 										if (!chart.showHideFlag) {
-											series.forEach(series => {
+											series.forEach((series) => {
 												series.hide();
 											});
 										} else {
-											series.forEach(series => {
+											series.forEach((series) => {
 												series.show();
 											});
 										}

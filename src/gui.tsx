@@ -11,32 +11,12 @@ import {
 import { lazy } from "./lazy";
 import { roundDate } from "./util";
 
-export class ReactChart extends React.Component<
-	{
-		options: Highcharts.Options;
-		callback: (chart: Highcharts.Chart) => void;
-	},
-	{}
-> {
+export class ReactChart extends React.Component<{
+	options: Highcharts.Options;
+	callback: (chart: Highcharts.Chart) => void;
+}> {
 	chart: Highcharts.Chart | null = null;
-	componentDidUpdate(oldProps: { options: Highcharts.Options }) {
-		/*if (!this.chart) return;
-		if (oldProps.options === this.props.options) return;
-		if (this.chart.series.length > 0) {
-			//this.chart.destroy();
-			lazy(this.chart.series)
-				.zipWith(this.props.options.series!, (series, newData) => {
-					series.setData(newData.data!);
-				})
-				.collect();
-		} else
-			this.chart = new Highcharts.Chart(
-				this.container,
-				this.props.options,
-			);*/
-	}
-	//Create the div which the chart will be rendered to.
-	render() {
+	render(): React.ReactElement {
 		return (
 			<HighchartsReact
 				highcharts={Highcharts}
@@ -84,7 +64,7 @@ export const GuiContainer = ({ dataUsage = 0, children = {} }) => (
 		<footer>
 			<button
 				className="btn btn-danger btn-sm"
-				onClick={e => {
+				onClick={(e) => {
 					e.preventDefault();
 					indexedDB.deleteDatabase("NmapLogDatabase");
 				}}
@@ -103,12 +83,12 @@ export const GuiContainer = ({ dataUsage = 0, children = {} }) => (
 		</footer>
 	</div>
 );
-export const ProgressGui = (props: {
+export const ProgressGui: React.FunctionComponent<{
 	progress: number;
 	total?: number;
 	prefix: string;
 	suffix: string;
-}) => (
+}> = (props) => (
 	<GuiContainer>
 		<div className="progress">
 			<div
@@ -133,20 +113,18 @@ export const ProgressGui = (props: {
 );
 
 export class Gui extends React.Component<
-	CommonChartData & { dataUsage: number },
-	{}
+	CommonChartData & { dataUsage: number }
 > {
 	granularities: Granularities = [
-		["Weekly", date => roundDate(date, 7, 24)],
-		["Daily", date => roundDate(date, 1, 24)],
-		["3 hourly", date => roundDate(date, 1, 3)],
-		["hourly", date => roundDate(date, 1, 1)],
-		["20 minutes", date => roundDate(date, 1, 1, 20)],
+		["Weekly", (date) => roundDate(date, 7, 24)],
+		["Daily", (date) => roundDate(date, 1, 24)],
+		["3 hourly", (date) => roundDate(date, 1, 3)],
+		["hourly", (date) => roundDate(date, 1, 1)],
+		["20 minutes", (date) => roundDate(date, 1, 1, 20)],
 	];
-	render() {
-		const meUptime = this.props.deviceInfos.get(
-			this.props.config.selfMacAddress,
-		)!.upCount;
+	render(): React.ReactElement {
+		const me = this.props.deviceInfos.get(this.props.config.selfMacAddress);
+		const meUptime = me?.upCount;
 		return (
 			<GuiContainer dataUsage={this.props.dataUsage}>
 				<GranularityChoosingChart
@@ -155,7 +133,7 @@ export class Gui extends React.Component<
 					title="Last Week"
 					highchartsOptions={{}}
 					{...this.props}
-					offsetter={date =>
+					offsetter={(date) =>
 						Date.now() - date.getTime() < 1000 * 60 * 60 * 24 * 7
 							? date
 							: null
@@ -168,7 +146,7 @@ export class Gui extends React.Component<
 					title="Last Month"
 					highchartsOptions={{}}
 					{...this.props}
-					offsetter={date =>
+					offsetter={(date) =>
 						Date.now() - date.getTime() < 1000 * 60 * 60 * 24 * 31
 							? date
 							: null
@@ -227,7 +205,7 @@ export class Gui extends React.Component<
 							<tr>
 								{"Name,Mac,Hostnames,IPs,Recorded Uptime,Average Uptime"
 									.split(",")
-									.map(x => (
+									.map((x) => (
 										<th key={x}>{x}</th>
 									))}
 							</tr>

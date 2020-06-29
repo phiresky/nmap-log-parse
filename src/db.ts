@@ -1,6 +1,6 @@
 import Dexie from "dexie";
 import { Config } from "./config";
-import { parseXML, parseXMLReturn } from "./util";
+import { parseXML } from "./util";
 import { lazy } from "./lazy";
 
 export interface NmapLog {
@@ -35,22 +35,19 @@ export class Database extends Dexie {
 		});
 	}
 	async getDeviceInfo(mac: string): Promise<DeviceInfo> {
-		const infos = await this.macToInfo
-			.where("mac")
-			.equals(mac)
-			.toArray();
+		const infos = await this.macToInfo.where("mac").equals(mac).toArray();
 		return {
 			displayname: this.config.deviceNames[mac],
 			vendor: infos
-				.filter(info => info.type === "vendor")
-				.map(info => info.info)
-				.filter(x => x.length > 0),
+				.filter((info) => info.type === "vendor")
+				.map((info) => info.info)
+				.filter((x) => x.length > 0),
 			hostnames: infos
-				.filter(info => info.type === "hostname")
-				.map(info => info.info),
+				.filter((info) => info.type === "hostname")
+				.map((info) => info.info),
 			ips: infos
-				.filter(info => info.type === "ip")
-				.map(info => info.info),
+				.filter((info) => info.type === "ip")
+				.map((info) => info.info),
 		};
 	}
 	/**
@@ -70,7 +67,7 @@ export class Database extends Dexie {
 		statusCallback?: (state: string, done: number, total: number) => void,
 		forceFetch = false,
 	): Promise<"404" | "success"> {
-		const gotDate = await this.gottenFiles.get(filename).catch(e => null);
+		const gotDate = await this.gottenFiles.get(filename).catch((e) => null);
 		if (!forceFetch && gotDate) return gotDate.result;
 
 		const response = await fetch(filename, { credentials: "include" });
@@ -91,8 +88,8 @@ export class Database extends Dexie {
 		const createStatusCallback = () =>
 			statusCallback
 				? [
-						new Promise<void>(resolve => {
-							statusCallback!("loading", i, total);
+						new Promise<void>((resolve) => {
+							statusCallback("loading", i, total);
 							setTimeout(resolve, 0);
 						}),
 				  ]
@@ -100,7 +97,7 @@ export class Database extends Dexie {
 		await lazy(rawXMLs)
 			.chunk(200)
 			.map(
-				async rawXMLs =>
+				async (rawXMLs) =>
 					await this.transaction(
 						"rw",
 						[this.gottenFiles, this.nmapLogs, this.macToInfo],
@@ -113,8 +110,8 @@ export class Database extends Dexie {
 									"<?xml version" + rawXML,
 								);
 								if (scan) {
-									this.nmapLogs.put(scan.online);
-									this.macToInfo.bulkPut(scan.newInfos);
+									void this.nmapLogs.put(scan.online);
+									void this.macToInfo.bulkPut(scan.newInfos);
 								}
 								i++;
 							}

@@ -7,13 +7,16 @@ export function levelInvert<A, B, C, D>(
 	defaultValue: D,
 ): Map<B, Map<A, C | D>> {
 	const bs = lazy(map.values())
-		.flatMap(innerMap => innerMap.keys())
+		.flatMap((innerMap) => innerMap.keys())
 		.unique()
 		.collect();
 	const as = [...map.keys()];
 	const innerMap = (b: B) =>
-		lazy(as).toMapKeyed(a => a, a => map.get(a)!.get(b) || defaultValue);
-	return new Map<B, Map<A, C | D>>(lazy(bs).toMapKeyed(b => b, innerMap));
+		lazy(as).toMapKeyed(
+			(a) => a,
+			(a) => map.get(a)!.get(b) || defaultValue,
+		);
+	return new Map<B, Map<A, C | D>>(lazy(bs).toMapKeyed((b) => b, innerMap));
 }
 
 export function roundDate(
@@ -37,11 +40,18 @@ export interface parseXMLReturn {
 	online: NmapLog;
 	newInfos: MacToInfo[];
 }
+function hasChildren<T>(obj: T): obj is T & { children: HTMLCollection } {
+	return !!(obj as any).children;
+}
+
 export function parseXML(
 	config: Config,
 	filename: string,
 	xml: string,
 ): parseXMLReturn | null {
+	/*const sax1 = await import('sax-wasm');
+	const sax = await import('sax-wasm/lib/sax-wasm.wasm');
+	console.log({sax1, sax});*/
 	const parser = new DOMParser();
 	const doc = parser.parseFromString(xml, "application/xml").documentElement;
 	let time = new Date(1000 * +doc.getAttribute("start")!);
@@ -66,12 +76,8 @@ export function parseXML(
 				continue;
 			else throw Error("unexpected " + h.nodeName);
 		}
-		function hasChildren<T>(
-			obj: T,
-		): obj is T & { children: HTMLCollection } {
-			return !!(obj as any).children;
-		}
-		let mac: string = "";
+
+		let mac = "";
 		if (!hasChildren(h)) throw Error("no children");
 		const ips: string[] = [],
 			hostnames: string[] = [];
@@ -110,11 +116,11 @@ export function parseXML(
 		}
 		scan.online.devices.add(mac);
 		scan.newInfos.push(
-			...ips.map(ip => ({ mac, type: "ip", info: ip } as MacToInfo)),
+			...ips.map((ip) => ({ mac, type: "ip", info: ip } as MacToInfo)),
 		);
 		scan.newInfos.push(
 			...hostnames.map(
-				hostname =>
+				(hostname) =>
 					({ mac, type: "hostname", info: hostname } as MacToInfo),
 			),
 		);

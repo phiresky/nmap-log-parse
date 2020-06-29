@@ -3,10 +3,10 @@ import * as ReactDOM from "react-dom";
 import "whatwg-fetch";
 import "../node_modules/bootstrap/dist/css/bootstrap.css";
 import { Config, defaultConfig } from "./config";
-//import 'regenerator-runtime';
+React;
 import { Database, DeviceInfo, NmapLog } from "./db";
-import { Gui, GuiContainer, ProgressGui } from "./gui";
-const target = document.getElementById("root")!;
+import { ProgressGui, Gui, GuiContainer } from "./gui";
+const target = document.getElementById("root");
 
 async function fetchDeviceInfos(db: Database, data: NmapLog[]) {
 	const stats = new Map<string, DeviceInfo & { upCount: number }>();
@@ -26,15 +26,15 @@ async function fetchDeviceInfos(db: Database, data: NmapLog[]) {
 	return stats;
 }
 async function run() {
-	const userConfig: Config = await fetch("config.json", {
+	const userConfig = (await fetch("config.json", {
 		credentials: "include",
-	}).then(resp => {
+	}).then((resp) => {
 		if (!resp.ok) {
 			console.warn(resp);
-			throw Error(resp.status + " " + resp.statusText);
+			throw Error(`${resp.status} ${resp.statusText}`);
 		}
 		return resp.json();
-	});
+	})) as Config;
 	const config = Object.assign({}, defaultConfig, userConfig);
 	config.deviceNames = Object.assign(
 		{},
@@ -44,7 +44,7 @@ async function run() {
 
 	const db = new Database(config);
 	console.time("getDates");
-	await db.getAllDates(days =>
+	await db.getAllDates((days) =>
 		ReactDOM.render(
 			<ProgressGui progress={days} prefix="Loading: " suffix=" days" />,
 			target,
@@ -71,30 +71,30 @@ async function run() {
 	console.timeEnd("fetchDeviceInfos");
 	let usage = 0;
 	try {
-		usage = (await navigator.storage.estimate()).usage;
+		usage = (await navigator.storage.estimate()).usage || 0;
 	} catch (e) {
 		console.log("could not get usage", e);
 	}
-		
+
 	ReactDOM.render(
 		<Gui
 			data={data}
 			config={config}
 			deviceInfos={deviceInfos}
-			dataUsage={usage || 0}
+			dataUsage={usage}
 		/>,
 		target,
 	);
 }
-run().catch(e => {
+run().catch((e) => {
 	ReactDOM.render(
 		<GuiContainer>
 			<pre>
-				Error: {e.toString()}.<br />
+				Error: {String(e)}.<br />
 				See F12 console for more details.
 			</pre>
 		</GuiContainer>,
 		target,
 	);
-	console.error(e);
+	console.error("run error", e);
 });
