@@ -2,6 +2,12 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Who's in my network?</title>
+<!-- hide first line of legend item "Show/Hide all" -->
+<style>
+.highcharts-legend-item:first-child path {
+    display: none;
+}
+</style>
 
 <div id="root"></div>
 <script src="./src/main.tsx"></script>

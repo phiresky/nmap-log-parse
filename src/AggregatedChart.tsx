@@ -57,6 +57,9 @@ export class AggregatedChart extends React.Component<
 		};
 		this.init();
 	}
+
+	chart: Highcharts.Chart | null = null;
+
 	componentDidUpdate(
 		oldProps: AggregatedChartData,
 		oldState: {
@@ -79,6 +82,7 @@ export class AggregatedChart extends React.Component<
 			});
 			return;
 		}
+		// exclude data of device calling nmap
 		agg.delete(this.props.config.selfMacAddress);
 		const totalMeUptime = lazy(meUptime.values()).sum();
 		const logIntervalMS = 1000 * 60 * this.props.config.logIntervalMinutes;
@@ -158,6 +162,28 @@ export class AggregatedChart extends React.Component<
 					},
 					plotOptions: {
 						line: { marker: { enabled: false }, animation: false },
+						series: {
+							events: {
+								legendItemClick() {
+									let chart: Highcharts.Chart = this.chart,
+										series: Highcharts.Series =
+											chart.series;
+									if (this.index === 0) {
+										if (!chart.showHideFlag) {
+											series.forEach(series => {
+												series.hide();
+											});
+										} else {
+											series.forEach(series => {
+												series.show();
+											});
+										}
+										chart.showHideFlag = !chart.showHideFlag;
+										this.hide();
+									}
+								},
+							},
+						},
 					},
 					yAxis: {
 						title: { text: "Online" },
@@ -169,13 +195,24 @@ export class AggregatedChart extends React.Component<
 						layout: "vertical",
 					},*/
 					// tooltip: {},
-					series: data.collect(),
+					series: [
+						{
+							name: "Show/Hide all",
+							visible: true,
+						},
+						...data.collect(),
+					],
 				},
 				this.props.highchartsOptions,
 			),
 		});
 	}
 	render() {
-		return <ReactChart options={this.state.options} />;
+		return (
+			<ReactChart
+				options={this.state.options}
+				callback={(chart: Highcharts.Chart) => (this.chart = chart)}
+			/>
+		);
 	}
 }

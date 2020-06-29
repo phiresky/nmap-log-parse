@@ -12,9 +12,13 @@ import { lazy } from "./lazy";
 import { roundDate } from "./util";
 
 export class ReactChart extends React.Component<
-	{ options: Highcharts.Options },
+	{
+		options: Highcharts.Options;
+		callback: (chart: Highcharts.Chart) => void;
+	},
 	{}
 > {
+	chart: Highcharts.Chart | null = null;
 	componentDidUpdate(oldProps: { options: Highcharts.Options }) {
 		/*if (!this.chart) return;
 		if (oldProps.options === this.props.options) return;
@@ -37,6 +41,7 @@ export class ReactChart extends React.Component<
 			<HighchartsReact
 				highcharts={Highcharts}
 				options={this.props.options}
+				callback={this.props.callback}
 			/>
 		);
 	}
